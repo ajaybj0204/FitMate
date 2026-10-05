@@ -1,0 +1,6 @@
+{
+  "name": "FitMate",
+  "description": "Understand your body. Train smarter. Live better. Your personalized fitness and wellness companion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
