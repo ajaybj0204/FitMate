@@ -1,21 +1,28 @@
 import React, { useMemo, useState } from 'react';
-import { EDUCATIONAL_TOPICS } from '../data/mockData';
-import { EducationalTopic } from '../types';
+import { useFitMate } from '../context/FitMateContext';
+import { getEducationalTopics, getEducationalTopic } from '../i18n/learnData';
 
 export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
   initialTopicId,
 }) => {
+  const { currentLanguage, t } = useFitMate();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [activeModalTopic, setActiveModalTopic] = useState<EducationalTopic | null>(() => {
-    if (initialTopicId) {
-      return EDUCATIONAL_TOPICS.find(t => t.id === initialTopicId) || null;
-    }
-    return null;
-  });
+  const [activeModalTopicId, setActiveModalTopicId] = useState<string | null>(initialTopicId || null);
+
+  // Retrieve topics dynamically based on selected language
+  const topics = useMemo(() => {
+    return getEducationalTopics(currentLanguage);
+  }, [currentLanguage]);
+
+  // Current active modal topic in the active language
+  const activeModalTopic = useMemo(() => {
+    if (!activeModalTopicId) return null;
+    return getEducationalTopic(activeModalTopicId, currentLanguage) || null;
+  }, [activeModalTopicId, currentLanguage]);
 
   const filteredTopics = useMemo(() => {
-    return EDUCATIONAL_TOPICS.filter(topic => {
+    return topics.filter(topic => {
       const matchesCategory =
         selectedCategory === 'all' || topic.category === selectedCategory;
       const matchesSearch =
@@ -24,7 +31,15 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
         topic.whatIsIt.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchTerm]);
+  }, [topics, selectedCategory, searchTerm]);
+
+  const categories = [
+    { id: 'all', label: t('allTopics', 'All Topics') },
+    { id: 'nutrition', label: t('nutrition', 'Nutrition') },
+    { id: 'metabolism', label: t('metabolismEnergy', 'Metabolism & Energy') },
+    { id: 'body', label: t('bodyComposition', 'Body Composition') },
+    { id: 'training', label: t('trainingRecovery', 'Training & Recovery') },
+  ];
 
   return (
     <div className="flex flex-col w-full gap-8 pb-12">
@@ -33,13 +48,16 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
         <div className="max-w-2xl">
           <div className="flex items-center gap-2 mb-2 text-[#4edea3] text-xs font-bold uppercase tracking-wider">
             <span className="material-symbols-outlined text-[18px]">school</span>
-            <span>FitMate Academy</span>
+            <span>{t('learnAcademy', 'FITORA Academy')}</span>
           </div>
           <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb] mb-2">
-            Learn Fitness — Made Simple
+            {t('learnHeadline', 'Learn Fitness — Made Simple')}
           </h1>
           <p className="text-sm sm:text-base text-[#bbcabf] leading-relaxed">
-            No complex medical jargon. Just clear, actionable breakdowns of every fitness, physiological, and nutrition concept you need to reach your peak performance.
+            {t(
+              'learnSubheadline',
+              'No complex medical jargon. Just clear, actionable breakdowns of every fitness, physiological, and nutrition concept you need to reach your peak performance.'
+            )}
           </p>
         </div>
 
@@ -52,7 +70,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search concepts (e.g. BMR, Protein)..."
+            placeholder={t('searchConcepts', 'Search concepts (e.g. BMR, Protein)...')}
             className="w-full bg-[#152031] border border-[#3c4a42] py-2.5 pl-10 pr-4 rounded-xl text-sm text-[#d8e3fb] placeholder-[#86948a] focus:outline-none focus:border-[#4edea3] transition-colors"
           />
           {searchTerm && (
@@ -68,13 +86,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
 
       {/* Category Filter Pills */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {[
-          { id: 'all', label: 'All Topics' },
-          { id: 'nutrition', label: 'Nutrition' },
-          { id: 'metabolism', label: 'Metabolism & Energy' },
-          { id: 'body', label: 'Body Composition' },
-          { id: 'training', label: 'Training & Recovery' },
-        ].map(cat => (
+        {categories.map(cat => (
           <button
             key={cat.id}
             onClick={() => setSelectedCategory(cat.id)}
@@ -94,7 +106,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
         {filteredTopics.map(topic => (
           <div
             key={topic.id}
-            onClick={() => setActiveModalTopic(topic)}
+            onClick={() => setActiveModalTopicId(topic.id)}
             className="bg-[#152031] hover:bg-[#1f2a3c] border border-[#1f2a3c] rounded-2xl p-6 flex flex-col justify-between transition-all shadow-xl group cursor-pointer hover:-translate-y-1"
           >
             <div>
@@ -117,7 +129,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
             </div>
 
             <div className="mt-5 pt-3 border-t border-[#1f2a3c] flex items-center text-[#4edea3] text-xs font-semibold gap-1">
-              <span>Learn concept</span>
+              <span>{t('learnConcept', 'Learn concept')}</span>
               <span className="material-symbols-outlined text-[16px]">chevron_right</span>
             </div>
           </div>
@@ -129,9 +141,11 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
           <span className="material-symbols-outlined text-[#86948a] text-[40px] mb-2">
             search_off
           </span>
-          <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">No concepts found</h3>
+          <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">
+            {t('noConceptsFound', 'No concepts found')}
+          </h3>
           <p className="text-xs text-[#86948a] mt-1">
-            Try adjusting your search query or reset the filter to "All Topics".
+            Try adjusting your search query or reset the filter to all topics.
           </p>
           <button
             onClick={() => {
@@ -140,7 +154,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
             }}
             className="mt-4 px-4 py-2 rounded-xl bg-[#111c2d] text-xs font-semibold text-[#4edea3] border border-[#4edea3]/30"
           >
-            Reset Filters
+            {t('resetFilters', 'Reset Filters')}
           </button>
         </div>
       )}
@@ -151,14 +165,14 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
           <div className="bg-[#152031] max-w-2xl w-full rounded-2xl p-6 sm:p-8 shadow-2xl relative border border-[#1f2a3c] my-auto">
             {/* Close button */}
             <button
-              onClick={() => setActiveModalTopic(null)}
+              onClick={() => setActiveModalTopicId(null)}
               className="absolute top-5 right-5 text-[#86948a] hover:text-[#d8e3fb] p-1.5 rounded-lg bg-[#111c2d] hover:bg-[#1f2a3c] transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
 
             {/* Modal Header */}
-            <div className="mb-5">
+            <div className="mb-5 pr-8">
               <span className="px-2.5 py-0.5 bg-[#10b981]/20 text-[#4edea3] text-[10px] font-bold rounded uppercase tracking-wider">
                 {activeModalTopic.categoryLabel}
               </span>
@@ -173,7 +187,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
               <div className="bg-[#111c2d] p-4 sm:p-5 rounded-xl border border-[#1f2a3c]">
                 <h4 className="text-[#4edea3] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
                   <span className="material-symbols-outlined text-[18px]">help</span>
-                  What is it?
+                  {t('whatIsIt', 'What is it?')}
                 </h4>
                 <p className="text-xs sm:text-sm text-[#bbcabf] leading-relaxed">
                   {activeModalTopic.whatIsIt}
@@ -184,7 +198,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
               <div className="bg-[#111c2d] p-4 sm:p-5 rounded-xl border border-[#1f2a3c]">
                 <h4 className="text-[#4edea3] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
                   <span className="material-symbols-outlined text-[18px]">bolt</span>
-                  Why does it matter?
+                  {t('whyItMatters', 'Why does it matter?')}
                 </h4>
                 <p className="text-xs sm:text-sm text-[#bbcabf] leading-relaxed">
                   {activeModalTopic.whyItMatters}
@@ -195,7 +209,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
               <div className="bg-[#111c2d] p-4 sm:p-5 rounded-xl border border-[#1f2a3c]">
                 <h4 className="text-[#4edea3] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
                   <span className="material-symbols-outlined text-[18px]">lightbulb</span>
-                  Simple Real-World Example
+                  {t('simpleExample', 'Simple Real-World Example')}
                 </h4>
                 <p className="text-xs sm:text-sm text-[#bbcabf] leading-relaxed italic">
                   "{activeModalTopic.simpleExample}"
@@ -206,7 +220,7 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
               <div className="bg-[#10b981]/10 p-4 sm:p-5 rounded-xl border border-[#4edea3]/25">
                 <h4 className="text-[#4edea3] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
                   <span className="material-symbols-outlined text-[18px]">bookmark</span>
-                  Common Misconception &amp; Takeaway
+                  {t('commonMisconception', 'Common Misconception & Takeaway')}
                 </h4>
                 <p className="text-xs sm:text-sm text-[#d8e3fb] font-medium leading-relaxed">
                   {activeModalTopic.commonMisconception}
@@ -217,10 +231,10 @@ export const LearnSection: React.FC<{ initialTopicId?: string | null }> = ({
             {/* Modal Footer */}
             <div className="mt-6 flex justify-end">
               <button
-                onClick={() => setActiveModalTopic(null)}
+                onClick={() => setActiveModalTopicId(null)}
                 className="bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] font-bold text-xs sm:text-sm px-6 py-2.5 rounded-xl hover:scale-[1.02] transition-transform"
               >
-                Got it
+                {t('gotIt', 'Got it')}
               </button>
             </div>
           </div>

@@ -17,7 +17,7 @@ export const OnboardingSection: React.FC = () => {
     } else {
       // Complete Onboarding!
       updateProfile(formData);
-      showToast('Blueprint generated successfully! Welcome to FitMate 🎉', 'success');
+      showToast('Blueprint generated successfully! Welcome to FITORA 🎉', 'success');
       navigateTo('dashboard');
     }
   };
@@ -45,15 +45,18 @@ export const OnboardingSection: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-2.5 py-0.5 rounded-full bg-[#10b981]/20 text-[#4edea3] text-[11px] font-bold uppercase tracking-wider">
-              Onboarding
+              FITORA Onboarding
             </span>
             <span className="text-xs text-[#86948a]">
               Step <span className="text-[#d8e3fb] font-semibold">{step}</span> of {totalSteps}
             </span>
           </div>
           <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb]">
-            Build Your Custom Blueprint
+            Build Your FITORA Blueprint
           </h1>
+          <p className="text-xs text-[#86948a] mt-1">
+            Welcome to FITORA — Your personalized fitness journey starts here.
+          </p>
         </div>
 
         {/* Progress Bar */}

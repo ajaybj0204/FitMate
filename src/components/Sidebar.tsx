@@ -1,40 +1,33 @@
 import React from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { NavigationSection } from '../types';
+import { FitoraLogo } from './FitoraLogo';
 
 export const Sidebar: React.FC = () => {
-  const { currentSection, navigateTo, startWorkout, toggleAIAssistant } = useFitMate();
+  const { currentSection, navigateTo, startWorkout, toggleAIAssistant, t } = useFitMate();
 
   const navItems: { id: NavigationSection; label: string; icon: string }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'my-health', label: 'My Health', icon: 'favorite' },
-    { id: 'workout', label: 'Workout', icon: 'fitness_center' },
-    { id: 'nutrition', label: 'Nutrition', icon: 'nutrition' },
-    { id: 'progress', label: 'Progress', icon: 'trending_up' },
-    { id: 'learn', label: 'Learn', icon: 'school' },
-    { id: 'profile', label: 'Profile', icon: 'person' },
+    { id: 'dashboard', label: t('dashboard', 'Dashboard'), icon: 'dashboard' },
+    { id: 'daily-plan', label: t('dailyPlan', 'Daily Plan'), icon: 'calendar_today' },
+    { id: 'my-health', label: t('myHealth', 'My Health'), icon: 'favorite' },
+    { id: 'workout', label: t('workout', 'Workout'), icon: 'fitness_center' },
+    { id: 'exercise-library', label: t('exerciseLibrary', 'Exercise Library'), icon: 'menu_book' },
+    { id: 'nutrition', label: t('nutrition', 'Nutrition'), icon: 'nutrition' },
+    { id: 'analytics', label: t('analytics', 'Analytics'), icon: 'insights' },
+    { id: 'progress', label: t('progress', 'Progress'), icon: 'trending_up' },
+    { id: 'learn', label: t('learn', 'Learn'), icon: 'school' },
+    { id: 'profile', label: t('profile', 'Profile'), icon: 'person' },
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-72 bg-[#111c2d] z-50 hidden lg:flex flex-col pt-8 pb-8 border-r border-[#1f2a3c]">
+    <aside className="fixed left-0 top-0 h-full w-72 bg-[#111c2d] z-50 hidden lg:flex flex-col pt-7 pb-8 border-r border-[#1f2a3c]">
       {/* Brand Logo & Name */}
       <div 
         onClick={() => navigateTo('landing')}
-        className="px-6 mb-8 flex items-center gap-3 cursor-pointer group select-none"
+        className="px-6 mb-7 flex items-center cursor-pointer group select-none"
+        title="FITORA - Home"
       >
-        <img
-          alt="FitMate Logo"
-          className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5qefloapqs6OpQdjHAKGt9VjTICuAN5kXtI0BJM7ENK4W-xQmuGmftLk0RL3QHx7kbDENREWwPMyroOuMRNRL5jQ0kj0nj3FfmFN1eys5icCugKtKa-pz4GzccD_A4CJwc2JVgLdmEtk7T7O6CCre5bhtA6NS79WOII89nkwROV5Aqy3A6CuuDtpIVwpDCWdojp2r_0ST81zX9j-BUIdr-9Zf3LhAdNThH8gdtV8WULglSNv3sTclPg"
-        />
-        <div className="flex flex-col">
-          <span className="font-headline text-2xl font-bold tracking-tight text-[#4edea3]">
-            FitMate
-          </span>
-          <span className="text-[10px] text-[#86948a] font-medium tracking-widest uppercase">
-            Personal Companion
-          </span>
-        </div>
+        <FitoraLogo size="md" showBadge />
       </div>
 
       {/* Navigation Links */}
@@ -69,7 +62,7 @@ export const Sidebar: React.FC = () => {
               <span className="material-symbols-outlined text-[18px] text-[#4edea3] group-hover:rotate-12 transition-transform">
                 smart_toy
               </span>
-              FitMate AI Assistant
+              FITORA AI Coach
             </span>
             <span className="text-[10px] bg-[#4edea3]/20 text-[#4edea3] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">
               Ready

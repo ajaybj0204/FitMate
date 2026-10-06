@@ -51,7 +51,7 @@ export const AIAssistantDrawer: React.FC = () => {
             </div>
             <div>
               <h3 className="font-headline font-semibold text-base text-[#d8e3fb] flex items-center gap-2">
-                FitMate AI Assistant
+                FITORA AI Coach
                 <span className="text-[10px] bg-[#4edea3]/20 text-[#4edea3] px-1.5 py-0.5 rounded font-bold uppercase">
                   Companion
                 </span>
@@ -138,7 +138,7 @@ export const AIAssistantDrawer: React.FC = () => {
             </button>
           </div>
           <p className="text-[10px] text-[#86948a] text-center mt-2">
-            FitMate AI calculates estimates based on Mifflin-St Jeor &amp; WHO guidelines. Not medical advice.
+            FITORA AI calculates estimates based on Mifflin-St Jeor &amp; WHO guidelines. Not medical advice.
           </p>
         </form>
       </div>

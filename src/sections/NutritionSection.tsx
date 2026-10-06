@@ -12,9 +12,12 @@ export const NutritionSection: React.FC = () => {
     consumedProtein,
     consumedCarbs,
     consumedFats,
+    addMealToGrocery,
+    setIsGroceryModalOpen,
+    t,
   } = useFitMate();
 
-  const [filter, setFilter] = useState<'all' | 'veg' | 'non-veg' | 'egg'>('all');
+  const [filter, setFilter] = useState<'all' | 'veg' | 'non-veg' | 'egg' | 'budget' | 'high-protein'>('all');
   const [isAddMealModalOpen, setIsAddMealModalOpen] = useState(false);
 
   // New Meal Form state
@@ -29,6 +32,7 @@ export const NutritionSection: React.FC = () => {
     portion: string;
     description: string;
     recipe: string;
+    costInr: number;
   }>({
     name: '',
     mealType: 'Snack',
@@ -40,10 +44,13 @@ export const NutritionSection: React.FC = () => {
     portion: '1 bowl',
     description: '',
     recipe: '',
+    costInr: 45,
   });
 
   const filteredMeals = useMemo(() => {
     if (filter === 'all') return meals;
+    if (filter === 'budget') return meals.filter(m => (m.costInr || 50) <= 60);
+    if (filter === 'high-protein') return meals.filter(m => m.protein >= 30);
     return meals.filter(m => m.dietaryType === filter);
   }, [meals, filter]);
 
@@ -183,17 +190,19 @@ export const NutritionSection: React.FC = () => {
       {/* Filter Tabs & Custom Meal Action */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         {/* Diet Category Segmented Controls */}
-        <div className="flex items-center gap-1.5 bg-[#111c2d] p-1.5 rounded-xl border border-[#1f2a3c]">
+        <div className="flex items-center gap-1.5 bg-[#111c2d] p-1.5 rounded-xl border border-[#1f2a3c] overflow-x-auto max-w-full">
           {[
-            { id: 'all' as const, label: 'All Plans' },
+            { id: 'all' as const, label: 'All' },
             { id: 'veg' as const, label: 'Vegetarian' },
-            { id: 'non-veg' as const, label: 'Non-Vegetarian' },
+            { id: 'non-veg' as const, label: 'Non-Veg' },
             { id: 'egg' as const, label: 'Eggetarian' },
+            { id: 'budget' as const, label: 'Budget (≤₹60)' },
+            { id: 'high-protein' as const, label: 'High Protein (≥30g)' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                 filter === tab.id
                   ? 'bg-[#4edea3] text-[#003824] shadow-md shadow-[#4edea3]/20'
                   : 'text-[#bbcabf] hover:text-[#d8e3fb]'
@@ -204,12 +213,46 @@ export const NutritionSection: React.FC = () => {
           ))}
         </div>
 
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsGroceryModalOpen(true)}
+            className="bg-[#111c2d] hover:bg-[#1f2a3c] text-[#4edea3] border border-[#4edea3]/30 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all"
+            title="Open Smart Grocery List"
+          >
+            <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
+            <span>Grocery List</span>
+          </button>
+
+          <button
+            onClick={() => setIsAddMealModalOpen(true)}
+            className="bg-[#152031] hover:bg-[#1f2a3c] text-[#d8e3fb] border border-[#1f2a3c] px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all hover:border-[#4edea3]/40"
+          >
+            <span className="material-symbols-outlined text-[18px] text-[#4edea3]">add_circle</span>
+            <span>Add Meal</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Indian Budget Optimization Callout */}
+      <div className="bg-[#111c2d] border border-[#1f2a3c] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#98da27]/10 text-[#98da27] flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[24px]">savings</span>
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-bold text-[#d8e3fb]">
+              Indian High-Protein Budget Engine
+            </h4>
+            <p className="text-xs text-[#86948a] mt-0.5">
+              Soya Chunks provide 52g protein per 100g at ₹12/serving. Pair with Dal &amp; Rice for full BCAAs under ₹40!
+            </p>
+          </div>
+        </div>
         <button
-          onClick={() => setIsAddMealModalOpen(true)}
-          className="bg-[#152031] hover:bg-[#1f2a3c] text-[#d8e3fb] border border-[#1f2a3c] px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all hover:border-[#4edea3]/40"
+          onClick={() => setFilter('budget')}
+          className="text-xs font-bold text-[#4edea3] hover:underline whitespace-nowrap"
         >
-          <span className="material-symbols-outlined text-[18px] text-[#4edea3]">add_circle</span>
-          Add Custom Meal
+          View Budget Meals →
         </button>
       </div>
 
@@ -233,8 +276,13 @@ export const NutritionSection: React.FC = () => {
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#111c2d] via-transparent to-transparent" />
-              <div className="absolute top-3 left-3 bg-[#081425]/85 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-semibold text-[#d8e3fb] border border-[#3c4a42]/50">
-                {meal.mealType} • {meal.time}
+              <div className="absolute top-3 left-3 bg-[#081425]/85 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-semibold text-[#d8e3fb] border border-[#3c4a42]/50 flex items-center gap-1.5">
+                <span>{meal.mealType} • {meal.time}</span>
+                {meal.costInr && (
+                  <span className="bg-[#4edea3]/20 text-[#4edea3] font-bold px-1.5 py-0.2 rounded text-[11px]">
+                    ₹{meal.costInr}
+                  </span>
+                )}
               </div>
 
               {/* Completed badge or toggle button */}
@@ -258,9 +306,16 @@ export const NutritionSection: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-headline text-xl font-bold text-[#d8e3fb]">{meal.name}</h3>
-                  <span className="text-[#4edea3] font-headline text-base font-bold tabular-nums">
-                    {meal.calories} kcal
-                  </span>
+                  <div className="text-right">
+                    <span className="text-[#4edea3] font-headline text-base font-bold tabular-nums block">
+                      {meal.calories} kcal
+                    </span>
+                    {meal.costPerGramProtein && (
+                      <span className="text-[10px] text-[#86948a] font-semibold">
+                        ₹{meal.costPerGramProtein}/g protein
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-xs sm:text-sm text-[#bbcabf] mb-4 leading-relaxed">
@@ -284,17 +339,32 @@ export const NutritionSection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Preparation & Recipe snippet */}
-              {meal.recipe && (
-                <div className="border-t border-[#1f2a3c] pt-4 mt-2">
-                  <span className="text-[11px] font-bold text-[#4edea3] uppercase tracking-wider block mb-1">
-                    Preparation &amp; Method
+              {/* Preparation & Ingredients Action */}
+              <div className="border-t border-[#1f2a3c] pt-4 mt-2 flex flex-col gap-3">
+                {meal.recipe && (
+                  <div>
+                    <span className="text-[11px] font-bold text-[#4edea3] uppercase tracking-wider block mb-1">
+                      Preparation Method
+                    </span>
+                    <p className="text-xs text-[#86948a] leading-relaxed italic">
+                      {meal.recipe}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-[#86948a]">
+                    Prep: {meal.prepTimeMinutes || 15} mins
                   </span>
-                  <p className="text-xs text-[#86948a] leading-relaxed italic">
-                    {meal.recipe}
-                  </p>
+                  <button
+                    onClick={() => addMealToGrocery(meal)}
+                    className="text-xs font-semibold text-[#4edea3] hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">add_shopping_cart</span>
+                    Add to Grocery List
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         ))}
@@ -310,7 +380,7 @@ export const NutritionSection: React.FC = () => {
             Health &amp; Nutritional Disclaimer
           </h4>
           <p className="text-xs text-[#86948a] leading-relaxed">
-            The nutritional information and meal plans provided on FitMate are calculated based on algorithmic estimates for body composition and training targets. Individual caloric requirements and macro tolerances vary depending on age, metabolic rate, endocrine health, and workout intensity. Consult a certified nutritionist or physician before starting any extreme deficit or transformation program.
+            The nutritional information and meal plans provided on FITORA are calculated based on algorithmic estimates for body composition and training targets. Individual caloric requirements and macro tolerances vary depending on age, metabolic rate, endocrine health, and workout intensity. Consult a certified nutritionist or physician before starting any extreme deficit or transformation program.
           </p>
         </div>
       </div>

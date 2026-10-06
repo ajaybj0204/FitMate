@@ -12,6 +12,11 @@ export const DashboardSection: React.FC = () => {
     navigateTo,
     activeWorkoutDay,
     toggleMealCompletion,
+    setIsRemindersModalOpen,
+    hydrationMl,
+    addWaterMl,
+    waterGoalMl,
+    t,
   } = useFitMate();
 
   // Dynamic greeting based on current local hour
@@ -38,14 +43,19 @@ export const DashboardSection: React.FC = () => {
       {/* Top Greeting Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <span className="text-xs uppercase tracking-wider text-[#4edea3] font-bold">
-            Daily Overview
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wider text-[#4edea3] font-extrabold">
+              FITORA Daily Pulse
+            </span>
+            <span className="text-[10px] bg-[#4edea3]/15 text-[#4edea3] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border border-[#4edea3]/30">
+              Intelligent Companion
+            </span>
+          </div>
           <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb] mt-1">
             {greeting}, {userProfile.name.split(' ')[0]} 👋
           </h1>
           <p className="text-sm sm:text-base text-[#bbcabf] mt-1">
-            Here's your fitness snapshot and performance roadmap for today.
+            Your intelligent personal fitness companion • Real-time performance &amp; wellness roadmap.
           </p>
         </div>
 
@@ -291,40 +301,76 @@ export const DashboardSection: React.FC = () => {
             {/* Quick Actions Card */}
             <div className="bg-[#111c2d] p-6 rounded-2xl flex flex-col justify-between border border-[#1f2a3c] shadow-xl">
               <div>
-                <h3 className="font-headline text-xl font-bold text-[#d8e3fb] mb-4">
-                  Quick Actions
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-headline text-xl font-bold text-[#d8e3fb]">
+                    Quick Actions
+                  </h3>
                   <button
-                    onClick={() => navigateTo('my-health')}
-                    className="bg-[#152031] p-3.5 rounded-xl flex flex-col items-center justify-center text-center gap-1.5 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
+                    onClick={() => setIsRemindersModalOpen(true)}
+                    className="text-xs text-[#4edea3] hover:underline flex items-center gap-1 font-semibold"
                   >
-                    <span className="material-symbols-outlined text-[#4edea3] text-[26px]">calculate</span>
-                    <span className="text-xs font-semibold text-[#d8e3fb]">Calculate Health</span>
+                    <span className="material-symbols-outlined text-[15px]">alarm</span>
+                    Reminders
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                  <button
+                    onClick={() => navigateTo('daily-plan')}
+                    className="bg-[#152031] p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
+                  >
+                    <span className="material-symbols-outlined text-[#4edea3] text-[24px]">calendar_today</span>
+                    <span className="text-xs font-semibold text-[#d8e3fb]">Daily Plan</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigateTo('exercise-library')}
+                    className="bg-[#152031] p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c] group"
+                    title="Explore Exercise Library"
+                  >
+                    <span className="material-symbols-outlined text-[#4edea3] text-[24px] group-hover:scale-110 transition-transform">menu_book</span>
+                    <span className="text-xs font-semibold text-[#d8e3fb]">Exercise Library</span>
                   </button>
 
                   <button
                     onClick={() => startWorkout()}
-                    className="bg-[#152031] p-3.5 rounded-xl flex flex-col items-center justify-center text-center gap-1.5 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
+                    className="bg-[#152031] p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
                   >
-                    <span className="material-symbols-outlined text-[#98da27] text-[26px]">fitness_center</span>
+                    <span className="material-symbols-outlined text-[#98da27] text-[24px]">fitness_center</span>
                     <span className="text-xs font-semibold text-[#d8e3fb]">Start Workout</span>
                   </button>
 
                   <button
-                    onClick={() => navigateTo('progress')}
-                    className="bg-[#152031] p-3.5 rounded-xl flex flex-col items-center justify-center text-center gap-1.5 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
+                    onClick={() => navigateTo('analytics')}
+                    className="bg-[#152031] p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
                   >
-                    <span className="material-symbols-outlined text-[#ffb3af] text-[26px]">scale</span>
-                    <span className="text-xs font-semibold text-[#d8e3fb]">Log Weight</span>
+                    <span className="material-symbols-outlined text-[#ffb3af] text-[24px]">insights</span>
+                    <span className="text-xs font-semibold text-[#d8e3fb]">Analytics</span>
                   </button>
 
                   <button
                     onClick={() => navigateTo('nutrition')}
-                    className="bg-[#152031] p-3.5 rounded-xl flex flex-col items-center justify-center text-center gap-1.5 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
+                    className="bg-[#152031] p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
                   >
-                    <span className="material-symbols-outlined text-[#4edea3] text-[26px]">restaurant</span>
-                    <span className="text-xs font-semibold text-[#d8e3fb]">Meal Plan</span>
+                    <span className="material-symbols-outlined text-[#4edea3] text-[24px]">restaurant</span>
+                    <span className="text-xs font-semibold text-[#d8e3fb]">Meals &amp; Diet</span>
+                  </button>
+
+                  <button
+                    onClick={() => addWaterMl(250)}
+                    className="bg-[#152031] p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
+                    title="Quick log +250ml water"
+                  >
+                    <span className="material-symbols-outlined text-[#4edea3] text-[24px]">water_drop</span>
+                    <span className="text-xs font-semibold text-[#d8e3fb]">+250ml Water</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigateTo('progress')}
+                    className="bg-[#152031] p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 hover:bg-[#1f2a3c] transition-colors border border-[#1f2a3c]"
+                  >
+                    <span className="material-symbols-outlined text-[#bbcabf] text-[24px]">scale</span>
+                    <span className="text-xs font-semibold text-[#d8e3fb]">Log Weight</span>
                   </button>
                 </div>
               </div>

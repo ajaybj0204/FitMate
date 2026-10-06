@@ -17,10 +17,15 @@ import { OnboardingSection } from './sections/OnboardingSection';
 import { DashboardSection } from './sections/DashboardSection';
 import { MyHealthSection } from './sections/MyHealthSection';
 import { WorkoutSection } from './sections/WorkoutSection';
+import { DailyPlanSection } from './sections/DailyPlanSection';
 import { NutritionSection } from './sections/NutritionSection';
+import { AnalyticsSection } from './sections/AnalyticsSection';
 import { ProgressSection } from './sections/ProgressSection';
 import { LearnSection } from './sections/LearnSection';
+import { ExerciseLibrarySection } from './sections/ExerciseLibrarySection';
 import { ProfileSection } from './sections/ProfileSection';
+import { SmartRemindersModal } from './components/SmartRemindersModal';
+import { SmartGroceryListModal } from './components/SmartGroceryListModal';
 
 const MainAppContent: React.FC = () => {
   const { currentSection, navigateTo } = useFitMate();
@@ -56,7 +61,10 @@ const MainAppContent: React.FC = () => {
             <MyHealthSection onOpenLearnModal={handleOpenLearnModal} />
           )}
           {currentSection === 'workout' && <WorkoutSection />}
+          {currentSection === 'exercise-library' && <ExerciseLibrarySection />}
+          {currentSection === 'daily-plan' && <DailyPlanSection />}
           {currentSection === 'nutrition' && <NutritionSection />}
+          {currentSection === 'analytics' && <AnalyticsSection />}
           {currentSection === 'progress' && <ProgressSection />}
           {currentSection === 'learn' && (
             <LearnSection initialTopicId={learnInitialTopic} />
@@ -67,6 +75,8 @@ const MainAppContent: React.FC = () => {
 
       {/* Global Modals & Interactive Overlays */}
       <WorkoutActiveModal />
+      <SmartRemindersModal />
+      <SmartGroceryListModal />
       <AIAssistantDrawer />
       <Toast />
     </div>

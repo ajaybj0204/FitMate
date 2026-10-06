@@ -1,6 +1,6 @@
 {
-  "name": "FitMate",
-  "description": "Understand your body. Train smarter. Live better. Your personalized fitness and wellness companion.",
+  "name": "FITORA",
+  "description": "Intelligent Personal Fitness & Wellness Companion. Understand your body. Train smarter. Live better.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

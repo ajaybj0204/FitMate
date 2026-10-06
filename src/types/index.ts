@@ -4,10 +4,21 @@ export type NavigationSection =
   | 'dashboard'
   | 'my-health'
   | 'workout'
+  | 'exercise-library'
+  | 'daily-plan'
   | 'nutrition'
+  | 'analytics'
   | 'progress'
   | 'learn'
   | 'profile';
+
+export type SupportedLanguage = 'en' | 'kn' | 'te' | 'ta' | 'ml';
+
+export interface LanguageOption {
+  code: SupportedLanguage;
+  name: string;
+  nativeName: string;
+}
 
 export type FitnessGoal =
   | 'Build Muscle'
@@ -63,10 +74,68 @@ export interface HealthMetrics {
   muscleGainCalories: number;
 }
 
+export type ExerciseAnimationType =
+  | 'squat'
+  | 'bench_press'
+  | 'pushup'
+  | 'lat_pulldown'
+  | 'shoulder_press'
+  | 'bicep_curl'
+  | 'plank'
+  | 'lunge'
+  | 'row'
+  | 'tricep'
+  | 'deadlift'
+  | 'pullup'
+  | 'dips'
+  | 'lateral_raise'
+  | 'leg_press'
+  | 'chest_fly'
+  | 'military_press'
+  | 'calf_raise'
+  | 'leg_raise'
+  | 'cardio'
+  | 'recovery';
+
+export type MuscleGroup =
+  | 'chest'
+  | 'shoulders'
+  | 'biceps'
+  | 'triceps'
+  | 'lats'
+  | 'upper_back'
+  | 'lower_back'
+  | 'quadriceps'
+  | 'hamstrings'
+  | 'glutes'
+  | 'calves'
+  | 'abs'
+  | 'core';
+
+export interface MuscleHighlightInfo {
+  primary: MuscleGroup[];
+  secondary: MuscleGroup[];
+  primaryLabels: string[];
+  secondaryLabels: string[];
+  activationScore?: number; // e.g. 95%
+}
+
+export interface ExerciseSubstitution {
+  name: string;
+  equipment: string;
+  reason: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+}
+
 export interface Exercise {
   id: string;
   name: string;
   targetMuscle: string;
+  targetMuscles?: string[];
+  primaryMuscles?: string[];
+  secondaryMuscles?: string[];
+  muscleHighlightInfo?: MuscleHighlightInfo;
+  calorieEstimate?: number;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   sets: number;
   reps: string;
@@ -75,6 +144,9 @@ export interface Exercise {
   formTips: string[];
   imageUrl: string;
   equipment: string;
+  animationType?: ExerciseAnimationType;
+  substitutions?: ExerciseSubstitution[];
+  defaultWeightKg?: number;
 }
 
 export interface WorkoutDay {
@@ -85,6 +157,14 @@ export interface WorkoutDay {
   isRest: boolean;
   durationMinutes: number;
   exercises: Exercise[];
+}
+
+export interface SetLog {
+  setNumber: number;
+  targetReps: number;
+  actualReps: number;
+  weightKg: number;
+  completed: boolean;
 }
 
 export interface Meal {
@@ -102,6 +182,11 @@ export interface Meal {
   recipe: string;
   imageUrl: string;
   completed: boolean;
+  costInr?: number;
+  costPerGramProtein?: number;
+  isBudgetFriendly?: boolean;
+  prepTimeMinutes?: number;
+  ingredients?: string[];
 }
 
 export interface ProgressEntry {
@@ -135,3 +220,66 @@ export interface ChatMessage {
   timestamp: string;
   suggestedPrompts?: string[];
 }
+
+export interface SmartReminder {
+  id: string;
+  title: string;
+  desc: string;
+  time: string;
+  enabled: boolean;
+  type: 'water' | 'workout' | 'meal' | 'sleep';
+  icon: string;
+}
+
+export interface DailyPlanItem {
+  id: string;
+  time: string;
+  title: string;
+  category: 'hydration' | 'meal' | 'workout' | 'recovery' | 'steps';
+  detail: string;
+  completed: boolean;
+}
+
+export interface HydrationLog {
+  currentMl: number;
+  targetMl: number;
+  history: { id: string; time: string; amountMl: number }[];
+}
+
+export interface SleepLog {
+  date: string;
+  sleepHours: number;
+  sleepMinutes: number;
+  sleepQuality: 'Deep' | 'Restful' | 'Fair' | 'Poor';
+  recoveryScore: number;
+  restingHeartRate: number;
+}
+
+export interface StepsLog {
+  date: string;
+  currentSteps: number;
+  targetSteps: number;
+  distanceKm: number;
+  caloriesBurned: number;
+}
+
+export interface GroceryItem {
+  id: string;
+  name: string;
+  quantity: string;
+  category: 'Produce' | 'Protein & Dairy' | 'Grains & Pulses' | 'Pantry & Spices';
+  estimatedCostInr: number;
+  checked: boolean;
+}
+
+export interface AchievementBadge {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  progress: number;
+  maxProgress: number;
+  category: string;
+}
+

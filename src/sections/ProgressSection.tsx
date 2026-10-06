@@ -3,10 +3,19 @@ import { useFitMate } from '../context/FitMateContext';
 import { ProgressEntry } from '../types';
 
 export const ProgressSection: React.FC = () => {
-  const { progressEntries, addProgressEntry, userProfile } = useFitMate();
+  const { progressEntries, addProgressEntry, userProfile, achievements, logSteps, logSleep, stepsLog, sleepLog } = useFitMate();
 
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d'>('30d');
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [isStepsModalOpen, setIsStepsModalOpen] = useState(false);
+  const [isSleepModalOpen, setIsSleepModalOpen] = useState(false);
+  const [sliderPosition, setSliderPosition] = useState(50); // 0-100%
+
+  // Temporary steps / sleep input
+  const [inputSteps, setInputSteps] = useState(stepsLog.currentSteps);
+  const [inputSleepHours, setInputSleepHours] = useState(sleepLog.sleepHours);
+  const [inputSleepMins, setInputSleepMins] = useState(sleepLog.sleepMinutes);
+  const [inputSleepQuality, setInputSleepQuality] = useState<any>(sleepLog.sleepQuality);
 
   // Form state for logging progress
   const [newWeight, setNewWeight] = useState<number>(userProfile.weightKg);
@@ -369,6 +378,155 @@ export const ProgressSection: React.FC = () => {
         </div>
       </div>
 
+      {/* Before & After Comparison Slider */}
+      <div className="bg-[#111c2d] p-6 sm:p-8 rounded-2xl border border-[#1f2a3c] shadow-xl flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider text-[#4edea3]">Visual Transformation</div>
+            <h3 className="font-headline text-xl sm:text-2xl font-bold text-[#d8e3fb] mt-0.5">
+              Before &amp; After Comparison Slider
+            </h3>
+            <p className="text-xs text-[#86948a] mt-0.5">
+              Week 1 (82.5 kg, 18.5% BF) vs Week 4 (76.5 kg, 16.5% BF)
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsStepsModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-[#152031] hover:bg-[#1f2a3c] text-[#98da27] border border-[#1f2a3c] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">directions_walk</span>
+              <span>Log Steps</span>
+            </button>
+            <button
+              onClick={() => setIsSleepModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-[#152031] hover:bg-[#1f2a3c] text-[#ffb3af] border border-[#1f2a3c] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">bedtime</span>
+              <span>Log Sleep</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Interactive Comparison Canvas */}
+        <div className="relative h-72 sm:h-96 w-full rounded-2xl overflow-hidden border border-[#1f2a3c] bg-[#081425] select-none">
+          {/* After image (full width behind) */}
+          <img
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzvBKu5sZFk8xKMEYvSFvmAlbmAynYeppu9qHJGe1jwbNi5D3w_p_jBIz6HmQC8fIeq5qOk20SNivWZWDJOOTig1MV7ui5zD2wv57elkrhwRDEmzB8POw1Vb_p-fuVc-_mZWx-L3UqHV2LD5MJSLUlA6VXM9Kgkl5hk2GmbQFbS9sKmlrG1tCCXWFadDsLWLYwBSyy_0nAEIdlJvTZBkMD9CoPGYKbw67_BwodgK2njZa_Iy1ctzZ_ow"
+            alt="Week 4 Current"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute top-4 right-4 bg-[#081425]/85 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-bold text-[#4edea3] border border-[#4edea3]/40 z-10">
+            WEEK 4 (NOW) • 76.5 kg
+          </div>
+
+          {/* Before image (clipped by slider position) */}
+          <div
+            className="absolute inset-0 overflow-hidden"
+            style={{ width: `${sliderPosition}%` }}
+          >
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzp4aA584ztb62N5vTJc21hmEKZnMHKtkfnskZk8oQNX6V0aaD3HHbhpKNAtmEZGP0SL_UTl3Ha-vpph1EbVFg0Z7Y0SIjrsI1t6XC8TDXEzQ7HhaenVoRag48njDTrGuGGdhj691fFGApFM2QOGeNIm247dvUdZwHfV4B7KJFbuDPIs1iOwsLrIedeGXIG7I1rjsp_0vGiCt2OIhCyPlXtfHakX6ilqOevwVBaVr5hK1g4D6h37QhFA"
+              alt="Week 1 Baseline"
+              className="absolute inset-0 h-full object-cover max-w-none"
+              style={{ width: '100%', minWidth: '100%', objectFit: 'cover' }}
+            />
+            <div className="absolute top-4 left-4 bg-[#081425]/85 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-bold text-[#d8e3fb] border border-[#3c4a42] z-10">
+              WEEK 1 (BASELINE) • 82.5 kg
+            </div>
+          </div>
+
+          {/* Vertical divider line and handle */}
+          <div
+            className="absolute top-0 bottom-0 w-1 bg-[#4edea3] shadow-[0_0_10px_#4edea3] pointer-events-none z-20"
+            style={{ left: `${sliderPosition}%` }}
+          >
+            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[#4edea3] text-[#003824] flex items-center justify-center shadow-xl">
+              <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+            </div>
+          </div>
+
+          {/* Range Slider Controller overlay */}
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={sliderPosition}
+            onChange={e => setSliderPosition(Number(e.target.value))}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30"
+          />
+        </div>
+
+        <div className="text-center text-xs text-[#86948a]">
+          ← Drag slider left or right to inspect muscle definition and abdominal changes →
+        </div>
+      </div>
+
+      {/* Achievements & Badges Showcase */}
+      <div className="bg-[#111c2d] p-6 sm:p-8 rounded-2xl border border-[#1f2a3c] shadow-xl flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider text-[#4edea3]">Gamification &amp; Consistency</div>
+            <h3 className="font-headline text-xl sm:text-2xl font-bold text-[#d8e3fb] mt-0.5">
+              Achievements &amp; Badges
+            </h3>
+            <p className="text-xs text-[#86948a] mt-0.5">
+              Milestone badges unlocked through workout consistency and nutritional compliance
+            </p>
+          </div>
+          <span className="text-xs font-bold text-[#4edea3] bg-[#10b981]/20 px-3 py-1 rounded-full">
+            {achievements.filter(a => a.unlocked).length} / {achievements.length} Unlocked
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {achievements.map(ach => (
+            <div
+              key={ach.id}
+              className={`p-4 rounded-xl border flex items-start gap-3.5 transition-all ${
+                ach.unlocked
+                  ? 'bg-[#152031] border-[#4edea3]/40'
+                  : 'bg-[#152031]/50 border-[#1f2a3c] opacity-60'
+              }`}
+            >
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-md ${
+                  ach.unlocked
+                    ? 'bg-[#4edea3]/20 text-[#4edea3] border border-[#4edea3]/40'
+                    : 'bg-[#1f2a3c] text-[#86948a]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[26px]">{ach.icon}</span>
+              </div>
+
+              <div className="flex-1">
+                <div className="flex items-center justify-between gap-1">
+                  <h4 className="text-xs sm:text-sm font-bold text-[#d8e3fb]">{ach.title}</h4>
+                  {ach.unlocked && (
+                    <span className="text-[10px] font-bold text-[#4edea3] bg-[#4edea3]/20 px-1.5 py-0.5 rounded">
+                      Earned
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#bbcabf] mt-0.5 leading-relaxed">{ach.description}</p>
+                <div className="mt-2.5 flex items-center justify-between text-[10px] text-[#86948a]">
+                  <span>Progress</span>
+                  <span className="font-bold text-[#d8e3fb]">
+                    {ach.progress} / {ach.maxProgress}
+                  </span>
+                </div>
+                <div className="w-full bg-[#111c2d] h-1.5 rounded-full mt-1 overflow-hidden">
+                  <div
+                    className="h-full bg-[#4edea3] rounded-full"
+                    style={{ width: `${Math.min(100, Math.round((ach.progress / ach.maxProgress) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Bottom Row: Progress Visual Timeline */}
       <div className="bg-[#111c2d] p-6 rounded-2xl border border-[#1f2a3c] shadow-xl">
         <div className="flex items-center justify-between mb-5">
@@ -445,6 +603,103 @@ export const ProgressSection: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Steps Modal */}
+      {isStepsModalOpen && (
+        <div className="fixed inset-0 bg-[#081425]/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-[#152031] rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-[#1f2a3c]">
+            <h3 className="font-headline text-lg font-bold text-[#d8e3fb] mb-1">Log Today's Steps</h3>
+            <p className="text-xs text-[#86948a] mb-4">Daily NEAT physical activity tracking</p>
+            <input
+              type="number"
+              value={inputSteps}
+              onChange={e => setInputSteps(Number(e.target.value))}
+              className="w-full bg-[#111c2d] border border-[#3c4a42] rounded-xl px-4 py-2.5 text-sm text-[#d8e3fb] font-bold mb-4 focus:outline-none focus:border-[#4edea3]"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsStepsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-[#111c2d] text-[#d8e3fb] text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  logSteps(inputSteps);
+                  setIsStepsModalOpen(false);
+                }}
+                className="px-5 py-2 rounded-xl bg-[#4edea3] text-[#003824] text-xs font-bold"
+              >
+                Save Steps
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sleep Modal */}
+      {isSleepModalOpen && (
+        <div className="fixed inset-0 bg-[#081425]/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-[#152031] rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-[#1f2a3c]">
+            <h3 className="font-headline text-lg font-bold text-[#d8e3fb] mb-1">Log Sleep &amp; Recovery</h3>
+            <p className="text-xs text-[#86948a] mb-4">Calculate neurological &amp; muscular readiness score</p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <label className="text-[11px] text-[#86948a] block mb-1">Hours</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="14"
+                  value={inputSleepHours}
+                  onChange={e => setInputSleepHours(Number(e.target.value))}
+                  className="w-full bg-[#111c2d] border border-[#3c4a42] rounded-xl px-3 py-2 text-xs text-[#d8e3fb]"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-[#86948a] block mb-1">Minutes</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={inputSleepMins}
+                  onChange={e => setInputSleepMins(Number(e.target.value))}
+                  className="w-full bg-[#111c2d] border border-[#3c4a42] rounded-xl px-3 py-2 text-xs text-[#d8e3fb]"
+                />
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="text-[11px] text-[#86948a] block mb-1">Quality</label>
+              <select
+                value={inputSleepQuality}
+                onChange={e => setInputSleepQuality(e.target.value)}
+                className="w-full bg-[#111c2d] border border-[#3c4a42] rounded-xl px-3 py-2 text-xs text-[#d8e3fb]"
+              >
+                <option value="Deep">Deep &amp; Restorative</option>
+                <option value="Restful">Restful</option>
+                <option value="Fair">Fair</option>
+                <option value="Poor">Poor / Fragmented</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsSleepModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-[#111c2d] text-[#d8e3fb] text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  logSleep(inputSleepHours, inputSleepMins, inputSleepQuality);
+                  setIsSleepModalOpen(false);
+                }}
+                className="px-5 py-2 rounded-xl bg-[#4edea3] text-[#003824] text-xs font-bold"
+              >
+                Save Sleep
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Log Progress Modal */}
       {isLogModalOpen && (

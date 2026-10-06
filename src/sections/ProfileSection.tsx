@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { DietPreference, FitnessExperience, FitnessGoal } from '../types';
+import { SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n/translations';
 
 export const ProfileSection: React.FC = () => {
-  const { userProfile, updateProfile, resetAllData } = useFitMate();
+  const { userProfile, updateProfile, resetAllData, currentLanguage, setLanguage, t } = useFitMate();
 
   // Modals
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
@@ -65,10 +66,10 @@ export const ProfileSection: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <span className="text-xs uppercase tracking-wider text-[#4edea3] font-bold">
-            Account Settings
+            {t('accountSettings', 'Account Settings')}
           </span>
           <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb] mt-0.5">
-            My Profile
+            {t('profile', 'My Profile')}
           </h1>
         </div>
 
@@ -84,7 +85,7 @@ export const ProfileSection: React.FC = () => {
             className="bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] font-bold text-xs sm:text-sm py-2.5 px-4 rounded-xl flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-md shadow-[#4edea3]/20"
           >
             <span className="material-symbols-outlined text-[18px]">edit</span>
-            Edit Profile
+            {t('editProfile', 'Edit Profile')}
           </button>
 
           <button
@@ -96,14 +97,14 @@ export const ProfileSection: React.FC = () => {
             className="bg-[#1f2a3c] hover:bg-[#2a3548] text-[#d8e3fb] font-semibold text-xs sm:text-sm py-2.5 px-4 rounded-xl flex items-center gap-2 border border-[#3c4a42] transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">straighten</span>
-            Update Measurements
+            {t('updateMeasurements', 'Update Measurements')}
           </button>
         </div>
       </div>
 
       {/* Main Grid: Left Column 4 cols / Right Column 8 cols */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Avatar & Account Actions */}
+        {/* Left Column: Avatar & Account Actions & Language Settings */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           {/* Profile Card */}
           <div className="bg-[#111c2d] rounded-2xl p-6 sm:p-8 flex flex-col items-center text-center shadow-xl relative overflow-hidden border border-[#1f2a3c]">
@@ -130,7 +131,7 @@ export const ProfileSection: React.FC = () => {
             <div className="w-full grid grid-cols-2 gap-3 pt-6 border-t border-[#1f2a3c]">
               <div className="bg-[#152031] p-3 rounded-xl text-center border border-[#1f2a3c]">
                 <span className="text-[10px] text-[#86948a] block uppercase font-semibold mb-1">
-                  Member Since
+                  {t('memberSince', 'Member Since')}
                 </span>
                 <span className="font-headline text-sm font-bold text-[#d8e3fb]">
                   {userProfile.memberSince}
@@ -139,7 +140,7 @@ export const ProfileSection: React.FC = () => {
 
               <div className="bg-[#152031] p-3 rounded-xl text-center border border-[#1f2a3c]">
                 <span className="text-[10px] text-[#86948a] block uppercase font-semibold mb-1">
-                  Active Streak
+                  {t('activeStreak', 'Active Streak')}
                 </span>
                 <span className="font-headline text-sm font-bold text-[#4edea3] flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-[#ffb3af] text-[18px]">
@@ -151,11 +152,91 @@ export const ProfileSection: React.FC = () => {
             </div>
           </div>
 
+          {/* Language Preference Settings Card */}
+          <div className="bg-[#111c2d] rounded-2xl p-6 flex flex-col shadow-xl border border-[#1f2a3c] relative overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#4edea3] text-[22px]">translate</span>
+                <h3 className="font-headline text-base font-bold text-[#d8e3fb]">
+                  {t('languagePreference', 'Language Preference')}
+                </h3>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 bg-[#10b981]/20 text-[#4edea3] rounded-full border border-[#4edea3]/30">
+                {SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage)?.nativeName}
+              </span>
+            </div>
+
+            <p className="text-xs text-[#86948a] mb-4 leading-relaxed">
+              {t(
+                'languageSubtitle',
+                'Select your preferred language. All metrics, workouts, recipes, and academy guides will instantly adapt and persist across sessions.'
+              )}
+            </p>
+
+            {/* Native Styled Dropdown */}
+            <div className="relative mb-3">
+              <label htmlFor="profile-language-dropdown" className="text-[11px] font-semibold text-[#bbcabf] block mb-1">
+                {t('languageActive', 'Active Language')}
+              </label>
+              <div className="relative">
+                <select
+                  id="profile-language-dropdown"
+                  value={currentLanguage}
+                  onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
+                  className="w-full bg-[#152031] hover:bg-[#1f2a3c] border border-[#3c4a42] text-[#d8e3fb] font-semibold text-xs sm:text-sm rounded-xl px-4 py-3 appearance-none focus:outline-none focus:border-[#4edea3] transition-all cursor-pointer pr-10"
+                >
+                  {SUPPORTED_LANGUAGES.map(lang => (
+                    <option key={lang.code} value={lang.code} className="bg-[#111c2d] text-[#d8e3fb] py-1.5">
+                      {lang.nativeName} ({lang.name})
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#4edea3]">
+                  <span className="material-symbols-outlined text-[20px]">expand_more</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick 1-tap language switch buttons */}
+            <div className="flex flex-col gap-1.5 pt-2 border-t border-[#1f2a3c]/60">
+              {SUPPORTED_LANGUAGES.map(lang => {
+                const isActive = currentLanguage === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    type="button"
+                    onClick={() => setLanguage(lang.code)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all ${
+                      isActive
+                        ? 'bg-[#10b981]/20 border border-[#4edea3] text-[#4edea3] font-bold shadow-sm'
+                        : 'bg-[#152031] hover:bg-[#1f2a3c] text-[#bbcabf] hover:text-[#d8e3fb] border border-transparent'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="font-semibold">{lang.nativeName}</span>
+                      <span className="text-[10px] text-[#86948a]">({lang.name})</span>
+                    </span>
+                    {isActive && (
+                      <span className="material-symbols-outlined text-[16px] text-[#4edea3]">
+                        check_circle
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-1.5 pt-3 mt-1 border-t border-[#1f2a3c]/60 text-[10px] text-[#86948a]">
+              <span className="material-symbols-outlined text-[#4edea3] text-[14px]">save</span>
+              <span>Saved in FITORA Context (localStorage: fitmate_lang_v1)</span>
+            </div>
+          </div>
+
           {/* Account Actions Card */}
           <div className="bg-[#111c2d] rounded-2xl p-6 flex flex-col shadow-xl border border-[#1f2a3c]">
             <h3 className="font-headline text-base font-bold text-[#d8e3fb] mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-[#4edea3] text-[20px]">security</span>
-              Account Actions
+              {t('accountSettings', 'Account Actions')}
             </h3>
 
             <div className="flex flex-col gap-3">
@@ -182,7 +263,7 @@ export const ProfileSection: React.FC = () => {
               >
                 <span className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-[#ffb4ab] text-[18px]">restart_alt</span>
-                  Reset All Local Data
+                  {t('resetData', 'Reset All Local Data')}
                 </span>
                 <span className="material-symbols-outlined text-[#ffb4ab] text-[18px]">chevron_right</span>
               </button>
@@ -199,7 +280,7 @@ export const ProfileSection: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-headline text-xl font-bold text-[#d8e3fb] flex items-center gap-2.5">
                 <span className="material-symbols-outlined text-[#4edea3] text-[24px]">badge</span>
-                Core Biometrics
+                {t('coreBiometrics', 'Core Biometrics')}
               </h3>
               <span className="text-[11px] font-bold px-3 py-1 bg-[#10b981]/20 text-[#4edea3] rounded-full">
                 Active Metrics
@@ -233,7 +314,7 @@ export const ProfileSection: React.FC = () => {
 
               <div className="bg-[#152031] p-5 rounded-xl flex flex-col justify-between border border-[#1f2a3c]">
                 <span className="text-[#86948a] text-[11px] font-bold uppercase tracking-wider mb-2">
-                  Weight
+                  {t('weight', 'Weight')}
                 </span>
                 <div className="flex items-baseline gap-2">
                   <span className="font-headline text-3xl font-bold text-[#d8e3fb] tabular-nums">
@@ -249,7 +330,7 @@ export const ProfileSection: React.FC = () => {
           <div className="bg-[#111c2d] rounded-2xl p-6 sm:p-8 shadow-xl border border-[#1f2a3c]">
             <h3 className="font-headline text-xl font-bold text-[#d8e3fb] mb-6 flex items-center gap-2.5">
               <span className="material-symbols-outlined text-[#4edea3] text-[24px]">tune</span>
-              Training &amp; Lifestyle Parameters
+              {t('trainingParameters', 'Training & Lifestyle Parameters')}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -260,7 +341,7 @@ export const ProfileSection: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[#86948a] text-[10px] font-bold uppercase tracking-wider block mb-1">
-                    Primary Goal
+                    {t('primaryGoal', 'Primary Goal')}
                   </span>
                   <span className="font-headline text-base font-bold text-[#d8e3fb] block mb-1">
                     {userProfile.goal}
@@ -278,7 +359,7 @@ export const ProfileSection: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[#86948a] text-[10px] font-bold uppercase tracking-wider block mb-1">
-                    Fitness Level
+                    {t('fitnessLevel', 'Fitness Level')}
                   </span>
                   <span className="font-headline text-base font-bold text-[#d8e3fb] block mb-1">
                     {userProfile.experience}
@@ -296,7 +377,7 @@ export const ProfileSection: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[#86948a] text-[10px] font-bold uppercase tracking-wider block mb-1">
-                    Activity Level
+                    {t('activityLevel', 'Activity Level')}
                   </span>
                   <span className="font-headline text-base font-bold text-[#d8e3fb] block mb-1">
                     {userProfile.activityLevel}
@@ -314,7 +395,7 @@ export const ProfileSection: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[#86948a] text-[10px] font-bold uppercase tracking-wider block mb-1">
-                    Nutrition Preference
+                    {t('dietPreference', 'Nutrition Preference')}
                   </span>
                   <span className="font-headline text-base font-bold text-[#d8e3fb] block mb-1">
                     {userProfile.dietPreference}
@@ -454,7 +535,7 @@ export const ProfileSection: React.FC = () => {
               </div>
 
               <p className="text-xs text-[#86948a] italic">
-                Note: Updating weight and height will automatically recalculate your BMI, BMR, TDEE, protein targets, and daily calorie targets across FitMate.
+                Note: Updating weight and height will automatically recalculate your BMI, BMR, TDEE, protein targets, and daily calorie targets across FITORA.
               </p>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#1f2a3c]">
@@ -556,7 +637,7 @@ export const ProfileSection: React.FC = () => {
               Reset All Local Data?
             </h3>
             <p className="text-xs text-[#bbcabf] mb-6">
-              This will restore all profile settings, logged workouts, meals, and progress records back to initial FitMate defaults. This action cannot be undone.
+              This will restore all profile settings, logged workouts, meals, and progress records back to initial FITORA defaults. This action cannot be undone.
             </p>
 
             <div className="flex justify-center gap-3">

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { Exercise } from '../types';
+import { ExerciseSubstitutionModal } from '../components/ExerciseSubstitutionModal';
+import { ExerciseAnimation } from '../components/ExerciseAnimation';
 
 export const WorkoutSection: React.FC = () => {
   const {
@@ -9,9 +11,11 @@ export const WorkoutSection: React.FC = () => {
     setSelectedScheduleDayId,
     startWorkout,
     userProfile,
+    navigateTo,
   } = useFitMate();
 
   const [inspectingExercise, setInspectingExercise] = useState<Exercise | null>(null);
+  const [substitutingExercise, setSubstitutingExercise] = useState<{ exercise: Exercise; index: number } | null>(null);
 
   const activeDay =
     workoutSchedule.find(d => d.id === selectedScheduleDayId) || workoutSchedule[0];
@@ -21,14 +25,19 @@ export const WorkoutSection: React.FC = () => {
       {/* Plan Overview Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-[#152031] rounded-2xl p-6 sm:p-8 shadow-xl gap-6 border border-[#1f2a3c]">
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs uppercase tracking-wider text-[#4edea3] font-bold">
-            Active Training Program
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wider text-[#4edea3] font-bold">
+              FITORA Training System
+            </span>
+            <span className="text-[10px] bg-[#4edea3]/15 text-[#4edea3] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border border-[#4edea3]/30">
+              Personalized
+            </span>
+          </div>
           <h1 className="font-headline text-2xl sm:text-3xl font-bold text-[#d8e3fb]">
             Hypertrophy &amp; Strength Builder
           </h1>
           <p className="text-xs sm:text-sm text-[#bbcabf] max-w-xl leading-relaxed">
-            Designed to maximize muscle mass and functional power through systematic progressive overload and calibrated supersets.
+            FITORA biomechanical workout regimen designed to maximize muscle mass and functional power through systematic progressive overload.
           </p>
         </div>
 
@@ -97,15 +106,26 @@ export const WorkoutSection: React.FC = () => {
             </span>
           </div>
 
-          {!activeDay.isRest && activeDay.exercises.length > 0 && (
+          <div className="flex items-center gap-2.5">
             <button
-              onClick={() => startWorkout(activeDay.id)}
-              className="bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-md shadow-[#4edea3]/20 shrink-0"
+              onClick={() => navigateTo('exercise-library')}
+              className="bg-[#111c2d] hover:bg-[#1f2a3c] text-[#4edea3] hover:text-white border border-[#4edea3]/30 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0"
+              title="Browse FITORA Exercise Library"
             >
-              <span className="material-symbols-outlined text-[20px]">play_arrow</span>
-              Start Full Workout
+              <span className="material-symbols-outlined text-[18px]">menu_book</span>
+              <span>Browse Library</span>
             </button>
-          )}
+
+            {!activeDay.isRest && activeDay.exercises.length > 0 && (
+              <button
+                onClick={() => startWorkout(activeDay.id)}
+                className="bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-md shadow-[#4edea3]/20 shrink-0"
+              >
+                <span className="material-symbols-outlined text-[20px]">play_arrow</span>
+                <span>Start Full Workout</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {activeDay.isRest || activeDay.exercises.length === 0 ? (
@@ -117,6 +137,13 @@ export const WorkoutSection: React.FC = () => {
             <p className="text-xs sm:text-sm text-[#bbcabf] max-w-md">
               Rest days allow muscle glycogen stores to recharge and micro-trauma in tendons to adapt. Sleep 8+ hours, drink water, and keep light activity like walking.
             </p>
+            <button
+              onClick={() => navigateTo('exercise-library')}
+              className="mt-2 px-5 py-2.5 rounded-xl bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-[#4edea3]/20"
+            >
+              <span className="material-symbols-outlined text-[18px]">self_improvement</span>
+              <span>Find Mobility &amp; Recovery Exercises</span>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -187,6 +214,13 @@ export const WorkoutSection: React.FC = () => {
                       Instructions &amp; Tips
                     </button>
                     <button
+                      onClick={() => setSubstitutingExercise({ exercise, index: idx })}
+                      className="bg-[#111c2d] hover:bg-[#1f2a3c] text-[#bbcabf] hover:text-[#4edea3] p-2.5 rounded-xl text-xs transition-all border border-[#1f2a3c]"
+                      title="Substitute Exercise"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+                    </button>
+                    <button
                       onClick={() => startWorkout(activeDay.id)}
                       className="bg-[#10b981]/20 hover:bg-[#4edea3] hover:text-[#003824] text-[#4edea3] px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
                       title="Start Workout"
@@ -201,92 +235,78 @@ export const WorkoutSection: React.FC = () => {
         )}
       </div>
 
-      {/* Exercise Detail Modal */}
+      {/* Exercise Detail Modal with 3D Anatomical Animation */}
       {inspectingExercise && (
-        <div className="fixed inset-0 bg-[#081425]/85 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-[#152031] rounded-2xl w-full max-w-xl p-6 sm:p-8 shadow-2xl relative border border-[#1f2a3c] my-auto">
+        <div className="fixed inset-0 bg-[#081425]/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-[#111927] rounded-3xl w-full max-w-2xl p-5 sm:p-7 shadow-2xl relative border border-[#1f2a3c] my-auto flex flex-col gap-4">
             <button
               onClick={() => setInspectingExercise(null)}
-              className="absolute top-5 right-5 p-1.5 text-[#86948a] hover:text-[#d8e3fb] rounded-lg hover:bg-[#1f2a3c]"
+              className="absolute top-5 right-5 p-1.5 text-[#86948a] hover:text-[#d8e3fb] rounded-xl hover:bg-[#1f2a3c] transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
 
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-0.5">
               <span className="text-xs uppercase font-bold text-[#4edea3]">
                 {inspectingExercise.targetMuscle}
               </span>
               <span className="text-xs text-[#86948a]">• {inspectingExercise.difficulty}</span>
+              <span className="text-xs text-[#86948a]">• {inspectingExercise.sets} Sets × {inspectingExercise.reps}</span>
             </div>
 
-            <h3 className="font-headline text-2xl font-bold text-[#d8e3fb] mb-3">
+            <h3 className="font-headline text-2xl font-bold text-[#d8e3fb]">
               {inspectingExercise.name}
             </h3>
 
-            {/* Photo */}
-            <div className="h-44 w-full rounded-xl overflow-hidden mb-4 bg-[#111c2d] border border-[#1f2a3c]">
-              <img
-                src={inspectingExercise.imageUrl}
-                alt={inspectingExercise.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            {/* 3D Exercise Demonstration */}
+            <ExerciseAnimation
+              type={inspectingExercise.animationType || 'row'}
+              exerciseName={inspectingExercise.name}
+              targetMuscle={inspectingExercise.targetMuscle}
+              primaryMuscles={inspectingExercise.primaryMuscles}
+              secondaryMuscles={inspectingExercise.secondaryMuscles}
+              muscleHighlightInfo={inspectingExercise.muscleHighlightInfo}
+              equipment={inspectingExercise.equipment}
+              instructions={inspectingExercise.instructions}
+              formTips={inspectingExercise.formTips}
+              calorieEstimate={inspectingExercise.calorieEstimate}
+              photoUrl={inspectingExercise.imageUrl}
+              activeSet={1}
+              totalSets={inspectingExercise.sets}
+              repsTarget={inspectingExercise.reps}
+            />
 
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-xs font-bold text-[#4edea3] uppercase tracking-wider mb-1">
-                  Required Equipment
-                </h4>
-                <p className="text-sm text-[#d8e3fb]">{inspectingExercise.equipment}</p>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-bold text-[#4edea3] uppercase tracking-wider mb-1">
-                  Execution Instructions
-                </h4>
-                <p className="text-sm text-[#bbcabf] leading-relaxed">
-                  {inspectingExercise.instructions}
-                </p>
-              </div>
-
-              {inspectingExercise.formTips && inspectingExercise.formTips.length > 0 && (
-                <div className="bg-[#111c2d] p-4 rounded-xl border border-[#1f2a3c]">
-                  <h4 className="text-xs font-bold text-[#98da27] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px]">tips_and_updates</span>
-                    Key Form Tips
-                  </h4>
-                  <ul className="space-y-1.5 text-xs text-[#bbcabf]">
-                    {inspectingExercise.formTips.map((tip, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-[#4edea3] mt-0.5">•</span>
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-[#1f2a3c]">
+            <div className="mt-2 flex justify-end gap-3 pt-3 border-t border-[#1f2a3c]">
               <button
                 onClick={() => setInspectingExercise(null)}
-                className="px-4 py-2.5 rounded-xl bg-[#111c2d] hover:bg-[#1f2a3c] text-[#d8e3fb] text-xs font-semibold transition-colors"
+                className="px-4 py-2.5 rounded-xl bg-[#0c1421] hover:bg-[#152336] text-[#d8e3fb] text-xs font-semibold transition-colors border border-[#1f2a3c]"
               >
-                Close
+                Close Preview
               </button>
               <button
                 onClick={() => {
                   setInspectingExercise(null);
                   startWorkout(activeDay.id);
                 }}
-                className="px-5 py-2.5 rounded-xl bg-[#4edea3] text-[#003824] hover:bg-[#6ffbbe] text-xs font-bold flex items-center gap-1.5 transition-transform hover:scale-[1.02]"
+                className="px-5 py-2.5 rounded-xl bg-[#4edea3] text-[#003824] hover:bg-[#6ffbbe] text-xs font-extrabold flex items-center gap-1.5 transition-transform hover:scale-[1.02] shadow-md shadow-[#4edea3]/20"
               >
                 <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                Start Workout Now
+                Start Workout ({activeDay.splitName})
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Exercise Substitution Modal */}
+      {substitutingExercise && (
+        <ExerciseSubstitutionModal
+          exercise={substitutingExercise.exercise}
+          dayId={activeDay.id}
+          exerciseIndex={substitutingExercise.index}
+          isOpen={true}
+          onClose={() => setSubstitutingExercise(null)}
+        />
       )}
     </div>
   );
