@@ -94,6 +94,7 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
   const [currentRepNumber, setCurrentRepNumber] = useState(1);
   const [renderEngine, setRenderEngine] = useState<'character' | '3d-webgl'>('character');
   const [showVideoGuide, setShowVideoGuide] = useState(false);
+  const [showPoseSheet, setShowPoseSheet] = useState(false);
   const [viewMode, setViewMode] = useState<'3d-model' | 'photo'>('3d-model');
 
   // Accordion State
@@ -216,6 +217,16 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
           >
             <span className="material-symbols-outlined text-[13px]">play_circle</span>
             <span>{showVideoGuide ? 'Real Video' : 'Real Video'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setShowPoseSheet(value => !value); setShowVideoGuide(false); }}
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border transition-all ${showPoseSheet ? 'bg-[#4edea3] text-[#003824] border-[#4edea3]' : 'bg-[#152336] text-[#4edea3] border-[#4edea3]/40'}`}
+            title="Open the included 30-pose realistic exercise reference sheet"
+          >
+            <span className="material-symbols-outlined text-[13px]">grid_view</span>
+            <span>Pose Library</span>
           </button>
 
           {/* Animated Character (Default) vs Optional 3D View */}
@@ -342,7 +353,18 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
         </div>
 
         {/* Curated video embeds only. If this exercise has no verified mapping, keep the animation visible. */}
-        {showVideoGuide && verifiedVideo ? (
+        {showPoseSheet ? (
+          <div className="relative z-10 mx-4 my-4 w-full max-w-4xl overflow-hidden rounded-2xl border border-[#4edea3]/30 bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-3 bg-[#081425] px-4 py-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4edea3]">FITORA Pose Library</p>
+                <p className="mt-1 text-xs text-[#d8e3fb]">30 realistic blue-shirt exercise poses · reference sheet</p>
+              </div>
+              <button type="button" onClick={() => setShowPoseSheet(false)} className="shrink-0 rounded-lg border border-[#4edea3]/30 px-3 py-2 text-xs font-bold text-[#4edea3]">Back to animation</button>
+            </div>
+            <img src="/fitora-exercise-poses.png" alt="FITORA library of 30 realistic blue-shirt exercise poses" className="block h-auto max-h-[560px] w-full object-contain" />
+          </div>
+        ) : showVideoGuide && verifiedVideo ? (
           <div className="relative z-10 mx-4 w-full max-w-3xl overflow-hidden rounded-2xl border border-[#4edea3]/30 bg-[#081425] shadow-2xl">
             <div className="flex items-center justify-between gap-3 px-4 py-3">
               <div className="min-w-0">
@@ -374,13 +396,13 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
             <button type="button" onClick={() => setShowVideoGuide(false)} className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-[#4edea3] px-5 py-3 text-sm font-bold text-[#003824] transition-colors hover:bg-[#6ffbbe]">Use FITORA animation</button>
           </div>
         ) : renderEngine === 'character' ? (
-          <FitoraCharacterAnimation type={type} motionProgress={motionProgress} isPeak={isPeak} />
+          <FitoraCharacterAnimation type={type} exerciseName={exerciseName} motionProgress={motionProgress} isPeak={isPeak} />
         ) : (
           <ExerciseAnimationModel type={type} motionProgress={motionProgress} cameraAngle={cameraAngle} isPeak={isPeak} onCameraChange={setCameraAngle} />
         )}
 
         {/* Cycle Progress Tracker for FITORA's generated animation */}
-        {!showVideoGuide && (
+        {!showVideoGuide && !showPoseSheet && (
           <div className="absolute inset-x-0 bottom-0 h-1.5 bg-[#08101a]">
             <div className="h-full bg-gradient-to-r from-[#4edea3] via-[#9ddf2e] to-[#ff3b5c] transition-all duration-75" style={{ width: `${Math.round(motionProgress * 100)}%` }} />
           </div>
