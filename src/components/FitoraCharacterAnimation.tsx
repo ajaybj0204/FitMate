@@ -45,15 +45,16 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
         {/* FITORA Modern Athletic Apparel */}
         {/* Sleeveless Tank Top: Modern Teal / Emerald Slate */}
         <linearGradient id="charTankTop" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#254854" />
-          <stop offset="60%" stopColor="#1b3640" />
-          <stop offset="100%" stopColor="#142930" />
+          <stop offset="0%" stopColor="#4169b2" />
+          <stop offset="42%" stopColor="#31549a" />
+          <stop offset="100%" stopColor="#203c79" />
         </linearGradient>
 
         {/* Gym Shorts: Dark Charcoal with FITORA Teal Trim */}
         <linearGradient id="charShorts" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#202c3d" />
-          <stop offset="100%" stopColor="#141c27" />
+          <stop offset="0%" stopColor="#20242c" />
+          <stop offset="55%" stopColor="#11151c" />
+          <stop offset="100%" stopColor="#080b10" />
         </linearGradient>
 
         {/* Hair: Modern Dark Styled Hair */}
@@ -64,9 +65,9 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
 
         {/* Athletic Footwear: Clean White/Teal Sneakers */}
         <linearGradient id="charSneaker" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#f1f5f9" />
-          <stop offset="80%" stopColor="#cbd5e1" />
-          <stop offset="100%" stopColor="#94a3b8" />
+          <stop offset="0%" stopColor="#374151" />
+          <stop offset="65%" stopColor="#202938" />
+          <stop offset="100%" stopColor="#111827" />
         </linearGradient>
 
         {/* Equipment: Matte Chrome & Rubber Cast Iron */}
@@ -129,12 +130,12 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
             {/* Sneaker Feet (Planted wide with toes slightly angled) */}
             <g transform="translate(195, 308)">
               <rect x="0" y="6" width="34" height="6" rx="2" fill="url(#charSneaker)" />
-              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#38bdf8" />
+              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#263f72" />
               <line x1="8" y1="0" x2="16" y2="6" stroke="#ffffff" strokeWidth="1" />
             </g>
             <g transform="translate(270, 308)">
               <rect x="0" y="6" width="34" height="6" rx="2" fill="url(#charSneaker)" />
-              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#38bdf8" />
+              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#263f72" />
               <line x1="8" y1="0" x2="16" y2="6" stroke="#ffffff" strokeWidth="1" />
             </g>
 
@@ -166,7 +167,7 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
                 fill="url(#charTankTop)"
               />
               {/* FITORA Logo Accent on Chest */}
-              <circle cx="250" cy={hipY - 45} r="3" fill="#4edea3" />
+              <circle cx="250" cy={hipY - 45} r="3" fill="#a9c8ff" />
 
               {/* Neck */}
               <rect x="243" y={hipY - 80} width="14" height="18" rx="2" fill="url(#charSkin)" />
@@ -278,7 +279,7 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
             {/* Planted toes / sneakers */}
             <g transform="translate(390, 292)">
               <rect x="0" y="4" width="22" height="6" rx="2" fill="url(#charSneaker)" />
-              <path d="M 0 4 L 18 4 L 14 -8 L 0 -4 Z" fill="#38bdf8" />
+              <path d="M 0 4 L 18 4 L 14 -8 L 0 -4 Z" fill="#263f72" />
             </g>
 
             {/* Hand flat on floor */}
@@ -313,11 +314,11 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
             {/* Sneaker Feet */}
             <g transform="translate(225, 308)">
               <rect x="0" y="6" width="34" height="6" rx="2" fill="url(#charSneaker)" />
-              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#38bdf8" />
+              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#263f72" />
             </g>
             <g transform="translate(265, 308)">
               <rect x="0" y="6" width="34" height="6" rx="2" fill="url(#charSneaker)" />
-              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#38bdf8" />
+              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#263f72" />
             </g>
 
             {/* Straight Legs */}
@@ -371,11 +372,11 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
             {/* Sneakers */}
             <g transform="translate(225, 308)">
               <rect x="0" y="6" width="34" height="6" rx="2" fill="url(#charSneaker)" />
-              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#38bdf8" />
+              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#263f72" />
             </g>
             <g transform="translate(265, 308)">
               <rect x="0" y="6" width="34" height="6" rx="2" fill="url(#charSneaker)" />
-              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#38bdf8" />
+              <path d="M 4 6 L 28 6 Q 32 3 28 0 L 8 0 Q 3 2 4 6 Z" fill="#263f72" />
             </g>
 
             {/* Legs */}
