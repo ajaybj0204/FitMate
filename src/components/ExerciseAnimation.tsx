@@ -8,6 +8,34 @@ import { FitoraCharacterAnimation } from './FitoraCharacterAnimation';
 
 export { ExerciseAnimationModel, FitoraCharacterAnimation };
 
+// Curated, exact video IDs (not YouTube search URLs). Add a verified ID for each exercise.
+// These two demonstrations are from the National Academy of Sports Medicine (NASM).
+const VERIFIED_EXERCISE_VIDEOS: Record<string, { id: string; title: string; source: string }> = {
+  'barbell bench press': {
+    id: 'CayG6UYqL8g',
+    title: 'How to do a Barbell Bench Press | Proper Form & Technique',
+    source: 'NASM',
+  },
+  'bench press': {
+    id: 'CayG6UYqL8g',
+    title: 'How to do a Barbell Bench Press | Proper Form & Technique',
+    source: 'NASM',
+  },
+  'push up': {
+    id: 'WDIpL0pjun0',
+    title: 'How to do a Push-Up | Proper Form & Technique',
+    source: 'NASM',
+  },
+  'push-up': {
+    id: 'WDIpL0pjun0',
+    title: 'How to do a Push-Up | Proper Form & Technique',
+    source: 'NASM',
+  },
+};
+
+const normalizeExerciseName = (name: string) =>
+  name.toLowerCase().replace(/[’']/g, '').replace(/\s+/g, ' ').trim();
+
 export interface ExerciseAnimationProps {
   type: ExerciseAnimationType;
   exerciseName: string;
@@ -65,7 +93,7 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
   const [motionProgress, setMotionProgress] = useState(0); // 0.0 to 1.0
   const [currentRepNumber, setCurrentRepNumber] = useState(1);
   const [renderEngine, setRenderEngine] = useState<'character' | '3d-webgl'>('character');
-  const [showVideoGuide, setShowVideoGuide] = useState(true);
+  const [showVideoGuide, setShowVideoGuide] = useState(false);
   const [viewMode, setViewMode] = useState<'3d-model' | 'photo'>('3d-model');
 
   // Accordion State
@@ -121,6 +149,7 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
   }, [motionProgress]);
 
   const currentPhase = modelData.phases[activePhaseIndex] || modelData.phases[0];
+  const verifiedVideo = VERIFIED_EXERCISE_VIDEOS[normalizeExerciseName(exerciseName)];
 
   // Primary & Secondary muscle lists (preferring simple user-friendly labels)
   const displayPrimaryMuscles = useMemo(() => {
@@ -312,20 +341,37 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
           <span className="text-[10px] text-[#86948a]">est.</span>
         </div>
 
-        {/* Real human demonstration search; generated animation remains available as fallback. */}
-        {showVideoGuide ? (
+        {/* Curated video embeds only. If this exercise has no verified mapping, keep the animation visible. */}
+        {showVideoGuide && verifiedVideo ? (
+          <div className="relative z-10 mx-4 w-full max-w-3xl overflow-hidden rounded-2xl border border-[#4edea3]/30 bg-[#081425] shadow-2xl">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4edea3]">Verified exercise demonstration</p>
+                <h3 className="mt-1 truncate text-sm font-bold text-[#d8e3fb]">{verifiedVideo.title}</h3>
+                <p className="mt-1 text-[10px] text-[#86948a]">Source: {verifiedVideo.source}</p>
+              </div>
+              <button type="button" onClick={() => setShowVideoGuide(false)} className="shrink-0 rounded-lg border border-[#4edea3]/30 px-3 py-2 text-xs font-bold text-[#4edea3] hover:bg-[#4edea3]/10">Back to animation</button>
+            </div>
+            <div className="aspect-video w-full bg-black">
+              <iframe
+                className="h-full w-full"
+                src={`https://www.youtube-nocookie.com/embed/${verifiedVideo.id}?rel=0&playsinline=1`}
+                title={verifiedVideo.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        ) : showVideoGuide && !verifiedVideo ? (
           <div className="relative z-10 mx-4 w-full max-w-xl rounded-2xl border border-[#4edea3]/30 bg-[#081425]/95 p-5 sm:p-7 text-center shadow-2xl">
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#4edea3]/15 text-[#4edea3]">
               <span className="material-symbols-outlined text-[32px]">smart_display</span>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4edea3]">Real human demonstration</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4edea3]">Video not mapped yet</p>
             <h3 className="mt-2 text-lg font-bold text-[#d8e3fb]">{exerciseName}</h3>
-            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[#bbcabf]">Watch real people demonstrate this exercise. YouTube opens in a new tab so you can choose a clear, relevant demonstration. Keep the form guidance below in view when you return.</p>
-            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${exerciseName} proper form exercise demonstration`)}`} target="_blank" rel="noreferrer noopener" className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-[#4edea3] px-5 py-3 text-sm font-bold text-[#003824] transition-colors hover:bg-[#6ffbbe]">
-              <span className="material-symbols-outlined text-[19px]">play_arrow</span> Watch real video demos <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-            </a>
-            <p className="mt-3 text-[10px] text-[#86948a]">Free • No API key • Opens in a new tab</p>
-            <button type="button" onClick={() => setShowVideoGuide(false)} className="mt-4 block w-full text-xs font-semibold text-[#bbcabf] underline underline-offset-4 hover:text-[#d8e3fb]">Use FITORA animated demo instead</button>
+            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[#bbcabf]">We haven't added a verified video for this exact exercise yet. To avoid showing the wrong movement, use the animation for now.</p>
+            <button type="button" onClick={() => setShowVideoGuide(false)} className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-[#4edea3] px-5 py-3 text-sm font-bold text-[#003824] transition-colors hover:bg-[#6ffbbe]">Use FITORA animation</button>
           </div>
         ) : renderEngine === 'character' ? (
           <FitoraCharacterAnimation type={type} motionProgress={motionProgress} isPeak={isPeak} />
