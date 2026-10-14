@@ -65,6 +65,7 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
   const [motionProgress, setMotionProgress] = useState(0); // 0.0 to 1.0
   const [currentRepNumber, setCurrentRepNumber] = useState(1);
   const [renderEngine, setRenderEngine] = useState<'character' | '3d-webgl'>('character');
+  const [showVideoGuide, setShowVideoGuide] = useState(true);
   const [viewMode, setViewMode] = useState<'3d-model' | 'photo'>('3d-model');
 
   // Accordion State
@@ -177,6 +178,17 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
 
         {/* Right: Mode Selector, Speed & Playback Controls */}
         <div className="flex items-center gap-2">
+          {/* Real human exercise demonstrations (free; no API key required) */}
+          <button
+            type="button"
+            onClick={() => setShowVideoGuide(value => !value)}
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border transition-all ${showVideoGuide ? 'bg-[#4edea3] text-[#003824] border-[#4edea3]' : 'bg-[#152336] text-[#4edea3] border-[#4edea3]/40'}`}
+            title="Show real human exercise demonstrations"
+          >
+            <span className="material-symbols-outlined text-[13px]">play_circle</span>
+            <span>{showVideoGuide ? 'Real Video' : 'Real Video'}</span>
+          </button>
+
           {/* Animated Character (Default) vs Optional 3D View */}
           <div className="flex items-center bg-[#070f1a] rounded-xl p-0.5 border border-[#1f2a3c]">
             <button
@@ -300,30 +312,33 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
           <span className="text-[10px] text-[#86948a]">est.</span>
         </div>
 
-        {/* MAIN CLEAR ANIMATED FITNESS CHARACTER (DEFAULT) */}
-        {renderEngine === 'character' ? (
-          <FitoraCharacterAnimation
-            type={type}
-            motionProgress={motionProgress}
-            isPeak={isPeak}
-          />
+        {/* Real human demonstration search; generated animation remains available as fallback. */}
+        {showVideoGuide ? (
+          <div className="relative z-10 mx-4 w-full max-w-xl rounded-2xl border border-[#4edea3]/30 bg-[#081425]/95 p-5 sm:p-7 text-center shadow-2xl">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#4edea3]/15 text-[#4edea3]">
+              <span className="material-symbols-outlined text-[32px]">smart_display</span>
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4edea3]">Real human demonstration</p>
+            <h3 className="mt-2 text-lg font-bold text-[#d8e3fb]">{exerciseName}</h3>
+            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[#bbcabf]">Watch real people demonstrate this exercise. YouTube opens in a new tab so you can choose a clear, relevant demonstration. Keep the form guidance below in view when you return.</p>
+            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${exerciseName} proper form exercise demonstration`)}`} target="_blank" rel="noreferrer noopener" className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-[#4edea3] px-5 py-3 text-sm font-bold text-[#003824] transition-colors hover:bg-[#6ffbbe]">
+              <span className="material-symbols-outlined text-[19px]">play_arrow</span> Watch real video demos <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+            </a>
+            <p className="mt-3 text-[10px] text-[#86948a]">Free • No API key • Opens in a new tab</p>
+            <button type="button" onClick={() => setShowVideoGuide(false)} className="mt-4 block w-full text-xs font-semibold text-[#bbcabf] underline underline-offset-4 hover:text-[#d8e3fb]">Use FITORA animated demo instead</button>
+          </div>
+        ) : renderEngine === 'character' ? (
+          <FitoraCharacterAnimation type={type} motionProgress={motionProgress} isPeak={isPeak} />
         ) : (
-          <ExerciseAnimationModel
-            type={type}
-            motionProgress={motionProgress}
-            cameraAngle={cameraAngle}
-            isPeak={isPeak}
-            onCameraChange={setCameraAngle}
-          />
+          <ExerciseAnimationModel type={type} motionProgress={motionProgress} cameraAngle={cameraAngle} isPeak={isPeak} onCameraChange={setCameraAngle} />
         )}
 
-        {/* Cycle Progress Tracker at bottom of canvas */}
-        <div className="absolute inset-x-0 bottom-0 h-1.5 bg-[#08101a]">
-          <div
-            className="h-full bg-gradient-to-r from-[#4edea3] via-[#9ddf2e] to-[#ff3b5c] transition-all duration-75"
-            style={{ width: `${Math.round(motionProgress * 100)}%` }}
-          />
-        </div>
+        {/* Cycle Progress Tracker for FITORA's generated animation */}
+        {!showVideoGuide && (
+          <div className="absolute inset-x-0 bottom-0 h-1.5 bg-[#08101a]">
+            <div className="h-full bg-gradient-to-r from-[#4edea3] via-[#9ddf2e] to-[#ff3b5c] transition-all duration-75" style={{ width: `${Math.round(motionProgress * 100)}%` }} />
+          </div>
+        )}
       </div>
 
       {/* ---------------- 3. SECONDARY MUSCLE HIGHLIGHT STRIP (CLEAN & SUBTLE) ---------------- */}
