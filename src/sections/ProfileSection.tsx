@@ -6,6 +6,46 @@ import { SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n/translations';
 export const ProfileSection: React.FC = () => {
   const { userProfile, updateProfile, resetAllData, currentLanguage, setLanguage, t } = useFitMate();
 
+
+  // Profile photo is saved in this browser so it remains after refresh.
+  const [profileImage, setProfileImage] = useState<string>(() => {
+    try {
+      return localStorage.getItem('fitora-profile-image') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const handleProfileImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      window.alert('Please select an image file.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      window.alert('Please choose an image smaller than 2 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return;
+      try {
+        localStorage.setItem('fitora-profile-image', reader.result);
+        setProfileImage(reader.result);
+      } catch {
+        window.alert('Unable to save this image. Please choose a smaller image.');
+      }
+      event.target.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Modals
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isUpdateMeasurementsModalOpen, setIsUpdateMeasurementsModalOpen] = useState(false);
@@ -110,18 +150,38 @@ export const ProfileSection: React.FC = () => {
           <div className="bg-[#111c2d] rounded-2xl p-6 sm:p-8 flex flex-col items-center text-center shadow-xl relative overflow-hidden border border-[#1f2a3c]">
             <div className="absolute inset-0 bg-gradient-to-br from-[#4edea3]/10 via-transparent to-transparent pointer-events-none" />
 
-            <div className="relative mb-5">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#4edea3]/30 shadow-2xl bg-[#152031]">
-                <img
-                  className="w-full h-full object-cover"
-                  alt={userProfile.name}
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcoQbNT5W3T6QG7ZBQOA2FE7_zwK7MNUOcYJb2mT_4KbUp1bzpcqalyKcpKzobaym_xYhW_GKmUD3m01w91D4Dx57_8yqow0Ncn9XHu9vjWLyU-sMcmemXlizh43Hfg1ZfJaCGifXc4NI2KOdDBKzbGXjZ4IUsDe8--Qgt_pTp7VHzW7vKJB6gz_DoEKGmleBaw_OGY6vGOYhqIN5AkvMxucWI_E7c9nUcp7ubGZq9rpZCi27mz6JrLQ"
-                />
+            <div className="relative mb-3">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#4edea3]/30 shadow-2xl bg-[#152031] flex items-center justify-center">
+                {profileImage ? (
+                  <img
+                    className="w-full h-full object-cover"
+                    alt={`${userProfile.name}'s profile`}
+                    src={profileImage}
+                  />
+                ) : (
+                  <span className="text-4xl font-bold text-[#4edea3]" aria-label="No profile photo uploaded">
+                    {userProfile.name.trim().charAt(0).toUpperCase() || '?'}
+                  </span>
+                )}
               </div>
               <span className="absolute bottom-1 right-1 bg-[#4edea3] text-[#003824] p-1.5 rounded-full shadow-lg flex items-center justify-center">
-                <span className="material-symbols-outlined text-[16px]">verified</span>
+                <span className="material-symbols-outlined text-[16px]">photo_camera</span>
               </span>
             </div>
+
+            <input
+              id="fitora-profile-photo-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleProfileImageUpload}
+            />
+            <label
+              htmlFor="fitora-profile-photo-upload"
+              className="mb-5 cursor-pointer rounded-xl border border-[#4edea3]/40 bg-[#152031] px-4 py-2 text-xs font-bold text-[#4edea3] hover:bg-[#1f2a3c] transition-colors"
+            >
+              {profileImage ? 'Change Photo' : 'Upload Photo'}
+            </label>
 
             <h2 className="font-headline text-2xl font-bold text-[#d8e3fb] mb-1">
               {userProfile.name}
