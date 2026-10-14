@@ -173,7 +173,13 @@ const FitMateContext = createContext<FitMateContextType | undefined>(undefined);
 
 export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Navigation & History Stack
-  const [currentSection, setCurrentSection] = useState<NavigationSection>('dashboard');
+  const [currentSection, setCurrentSection] = useState<NavigationSection>(() => {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.PROFILE) ? 'dashboard' : 'landing';
+  } catch {
+    return 'landing';
+  }
+});
   const [navigationHistory, setNavigationHistory] = useState<NavigationSection[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
