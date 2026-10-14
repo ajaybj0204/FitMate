@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { SUPPORTED_LANGUAGES } from '../i18n/translations';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -20,6 +20,31 @@ export const Header: React.FC<{ onMobileMenuClick?: () => void }> = ({ onMobileM
     hydrationMl,
     addWaterMl,
   } = useFitMate();
+
+  const [profileImage, setProfileImage] = useState<string>(() => {
+    try {
+      return localStorage.getItem('fitora-profile-image') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  useEffect(() => {
+    const syncProfileImage = () => {
+      try {
+        setProfileImage(localStorage.getItem('fitora-profile-image') || '');
+      } catch {
+        setProfileImage('');
+      }
+    };
+
+    window.addEventListener('fitora-profile-image-updated', syncProfileImage);
+    window.addEventListener('storage', syncProfileImage);
+    return () => {
+      window.removeEventListener('fitora-profile-image-updated', syncProfileImage);
+      window.removeEventListener('storage', syncProfileImage);
+    };
+  }, []);
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
@@ -253,11 +278,20 @@ export const Header: React.FC<{ onMobileMenuClick?: () => void }> = ({ onMobileM
           className="flex items-center gap-2 cursor-pointer p-1 rounded-xl hover:bg-[#152031] transition-colors group"
         >
           <div className="w-8 h-8 rounded-full overflow-hidden border border-[#4edea3]/40 shadow-sm relative">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcoQbNT5W3T6QG7ZBQOA2FE7_zwK7MNUOcYJb2mT_4KbUp1bzpcqalyKcpKzobaym_xYhW_GKmUD3m01w91D4Dx57_8yqow0Ncn9XHu9vjWLyU-sMcmemXlizh43Hfg1ZfJaCGifXc4NI2KOdDBKzbGXjZ4IUsDe8--Qgt_pTp7VHzW7vKJB6gz_DoEKGmleBaw_OGY6vGOYhqIN5AkvMxucWI_E7c9nUcp7ubGZq9rpZCi27mz6JrLQ"
-              alt="Alex Rivera"
-              className="w-full h-full object-cover"
-            />
+            {profileImage ? (
+              <img
+                src={profileImage}
+                alt={`${userProfile.name} profile`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center bg-[#152031] text-[#4edea3] font-bold text-sm"
+                aria-label="No profile photo uploaded"
+              >
+                {(userProfile.name || 'U').trim().charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
           <div className="hidden lg:flex flex-col text-left">
             <span className="text-xs font-semibold text-[#d8e3fb] group-hover:text-[#4edea3] transition-colors leading-none">
