@@ -13,9 +13,7 @@ export interface FitoraCharacterAnimationProps {
 // Each exercise uses the closest matching reference poses instead of the old drawn SVG person.
 const POSES: Record<string, number[]> = {
   pushup: [10, 9, 10, 8],
-  push: [10, 9, 10, 8],
-  bench: [10, 9, 10, 8],
-  chest: [10, 9, 10, 8],
+  benchpress: [10, 9, 10, 8],
   plank: [10, 9, 10, 8],
   squat: [1, 2, 1, 2],
   lunge: [2, 1, 2, 1],
@@ -23,25 +21,51 @@ const POSES: Record<string, number[]> = {
   deadlift: [3, 4, 3, 4],
   row: [3, 6, 3, 6],
   burpee: [5, 2, 7, 2],
-  mountain: [5, 6, 5, 6],
+  mountainclimber: [5, 6, 5, 6],
   crunch: [15, 16, 15, 16],
   situp: [15, 18, 23, 15],
-  'sit-up': [15, 18, 23, 15],
-  bicycle: [15, 16, 22, 15],
-  leg: [20, 27, 20, 27],
-  bridge: [20, 16, 20, 16],
+  bicyclecrunch: [15, 16, 22, 15],
+  legraise: [20, 27, 20, 27],
+  gluteBridge: [20, 16, 20, 16],
   dip: [26, 26, 26, 26],
-  pull: [24, 24, 24, 24],
-  hang: [24, 24, 24, 24],
-  extension: [21, 20, 21, 20],
+  pullup: [24, 24, 24, 24],
+  latpulldown: [24, 24, 24, 24],
+  backextension: [21, 20, 21, 20],
 };
 
-function choosePoses(exerciseName: string, type: string): number[] {
-  const key = `${exerciseName} ${type}`.toLowerCase().replace(/[^a-z0-9 -]/g, ' ');
-  for (const [needle, frames] of Object.entries(POSES)) {
-    if (key.includes(needle)) return frames;
+const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/** Match the human-readable exercise name FIRST. The incoming animation type can
+ * be stale or too generic, so it must never override a clear name such as Crunch. */
+function choosePoses(exerciseName: string, _type: string): number[] | null {
+  const name = normalize(exerciseName);
+  const nameRules: Array<[RegExp, string]> = [
+    [/bicycle.*crunch|bicyclecrunch/, 'bicyclecrunch'],
+    [/crunch|situp|situps|situp/, 'crunch'],
+    [/mountainclimber|mountainclimbers/, 'mountainclimber'],
+    [/pushup|pushups|pressup|pressups/, 'pushup'],
+    [/benchpress|chestpress/, 'benchpress'],
+    [/pullup|pullups|chinup|chinups/, 'pullup'],
+    [/latpulldown/, 'latpulldown'],
+    [/deadlift|romanianhinge|rdl/, 'deadlift'],
+    [/squat|legpress/, 'squat'],
+    [/lunge|split squat|bulgariansplit/, 'lunge'],
+    [/bicepcurl|hammercurl|curl/, 'curl'],
+    [/seatedrow|bentoverrow|dumbbellrow|cablerow|row/, 'row'],
+    [/burpee/, 'burpee'],
+    [/plank/, 'plank'],
+    [/legraise|legraises|hangingknee/, 'legraise'],
+    [/glutebridge|hipthrust/, 'gluteBridge'],
+    [/dip|tricepdip/, 'dip'],
+    [/backextension|superman/, 'backextension'],
+  ];
+  for (const [pattern, key] of nameRules) {
+    if (pattern.test(name)) return POSES[key];
   }
-  return [1, 2, 1, 2];
+
+  // Never fall back to a generic animation type: if the name is unknown,
+  // show the unavailable state below instead of demonstrating the wrong exercise.
+  return null;
 }
 
 export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> = ({
@@ -53,6 +77,11 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
 }) => {
   const frames = useMemo(() => choosePoses(exerciseName, String(type)), [exerciseName, type]);
   const normalized = Math.max(0, Math.min(0.999, motionProgress));
+  if (!frames) {
+    return <div className={`flex h-full min-h-56 w-full items-center justify-center bg-slate-50 p-6 text-center ${className}`} role="status">
+      <div><div className="mb-2 text-3xl">🏋️</div><p className="font-semibold text-slate-800">{exerciseName} demonstration</p><p className="mt-1 text-sm text-slate-600">An exact animation is not available yet. We won’t show a different exercise by mistake.</p></div>
+    </div>;
+  }
   const frameIndex = Math.min(frames.length - 1, Math.floor(normalized * frames.length));
   const nextFrame = (frameIndex + 1) % frames.length;
   const blend = (normalized * frames.length) % 1;
