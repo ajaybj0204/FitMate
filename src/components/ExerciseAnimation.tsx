@@ -105,7 +105,7 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
     setCameraAngle(modelData.defaultCamera || 'side');
     setMotionProgress(0);
     setCurrentRepNumber(1);
-  }, [type, modelData.defaultCamera]);
+  }, [type, exerciseName, modelData.defaultCamera]);
 
   // Smooth 60fps kinetic cycle loop with authentic resistance training cadence:
   // 3.2 seconds base cycle modulated by playbackSpeed
@@ -362,7 +362,14 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
               </div>
               <button type="button" onClick={() => setShowPoseSheet(false)} className="shrink-0 rounded-lg border border-[#4edea3]/30 px-3 py-2 text-xs font-bold text-[#4edea3]">Back to animation</button>
             </div>
-            <img src="/fitora-exercise-poses.png" alt="FITORA library of 30 realistic blue-shirt exercise poses" className="block h-auto max-h-[560px] w-full object-contain" />
+            <div className="grid grid-cols-3 gap-2 bg-[#08121f] p-3 sm:grid-cols-5 md:grid-cols-6">
+              {Array.from({ length: 30 }, (_, i) => i + 1).map((pose) => (
+                <div key={pose} className="overflow-hidden rounded-lg border border-[#26364a] bg-[#111d2c] p-1">
+                  <img src={`/pose-${String(pose).padStart(2, '0')}.png`} alt={`FITORA exercise pose ${pose}`} loading="lazy" className="aspect-square w-full object-contain" />
+                  <p className="py-1 text-center text-[10px] text-[#d8e3fb]">Pose {pose}</p>
+                </div>
+              ))}
+            </div>
           </div>
         ) : showVideoGuide && verifiedVideo ? (
           <div className="relative z-10 mx-4 w-full max-w-3xl overflow-hidden rounded-2xl border border-[#4edea3]/30 bg-[#081425] shadow-2xl">
