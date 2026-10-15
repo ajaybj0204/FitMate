@@ -64,14 +64,14 @@ export const FitoraCharacterAnimation: React.FC<FitoraCharacterAnimationProps> =
       <div className="pointer-events-none absolute bottom-[12%] h-5 w-[64%] rounded-[50%] bg-slate-300/35 blur-xl" />
       <div className="relative z-10 flex h-full w-full items-center justify-center">
         <img
-          src={`/fitora-poses/pose-${String(currentPose).padStart(2, '0')}.png`}
+          src={`/pose-${String(currentPose).padStart(2, '0')}.png`}
           alt={`${exerciseName || 'Exercise'} movement pose`}
           draggable={false}
           className="absolute h-[92%] w-[92%] select-none object-contain transition-opacity duration-150"
           style={{ opacity: 1 - blend * 0.7, transform: `translateY(${isPeak ? '-2px' : '0px'}) scale(${isPeak ? 1.015 : 1})` }}
         />
         <img
-          src={`/fitora-poses/pose-${String(nextPose).padStart(2, '0')}.png`}
+          src={`/pose-${String(nextPose).padStart(2, '0')}.png`}
           alt=""
           aria-hidden="true"
           draggable={false}
