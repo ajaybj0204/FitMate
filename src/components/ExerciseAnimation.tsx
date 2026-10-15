@@ -8,34 +8,6 @@ import { FitoraCharacterAnimation } from './FitoraCharacterAnimation';
 
 export { ExerciseAnimationModel, FitoraCharacterAnimation };
 
-// Curated, exact video IDs (not YouTube search URLs). Add a verified ID for each exercise.
-// These two demonstrations are from the National Academy of Sports Medicine (NASM).
-const VERIFIED_EXERCISE_VIDEOS: Record<string, { id: string; title: string; source: string }> = {
-  'barbell bench press': {
-    id: 'CayG6UYqL8g',
-    title: 'How to do a Barbell Bench Press | Proper Form & Technique',
-    source: 'NASM',
-  },
-  'bench press': {
-    id: 'CayG6UYqL8g',
-    title: 'How to do a Barbell Bench Press | Proper Form & Technique',
-    source: 'NASM',
-  },
-  'push up': {
-    id: 'WDIpL0pjun0',
-    title: 'How to do a Push-Up | Proper Form & Technique',
-    source: 'NASM',
-  },
-  'push-up': {
-    id: 'WDIpL0pjun0',
-    title: 'How to do a Push-Up | Proper Form & Technique',
-    source: 'NASM',
-  },
-};
-
-const normalizeExerciseName = (name: string) =>
-  name.toLowerCase().replace(/[’']/g, '').replace(/\s+/g, ' ').trim();
-
 export interface ExerciseAnimationProps {
   type: ExerciseAnimationType;
   exerciseName: string;
@@ -93,8 +65,6 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
   const [motionProgress, setMotionProgress] = useState(0); // 0.0 to 1.0
   const [currentRepNumber, setCurrentRepNumber] = useState(1);
   const [renderEngine, setRenderEngine] = useState<'character' | '3d-webgl'>('character');
-  const [showVideoGuide, setShowVideoGuide] = useState(false);
-  const [showPoseSheet, setShowPoseSheet] = useState(false);
   const [viewMode, setViewMode] = useState<'3d-model' | 'photo'>('3d-model');
 
   // Accordion State
@@ -105,7 +75,7 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
     setCameraAngle(modelData.defaultCamera || 'side');
     setMotionProgress(0);
     setCurrentRepNumber(1);
-  }, [type, exerciseName, modelData.defaultCamera]);
+  }, [type, modelData.defaultCamera]);
 
   // Smooth 60fps kinetic cycle loop with authentic resistance training cadence:
   // 3.2 seconds base cycle modulated by playbackSpeed
@@ -150,7 +120,6 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
   }, [motionProgress]);
 
   const currentPhase = modelData.phases[activePhaseIndex] || modelData.phases[0];
-  const verifiedVideo = VERIFIED_EXERCISE_VIDEOS[normalizeExerciseName(exerciseName)];
 
   // Primary & Secondary muscle lists (preferring simple user-friendly labels)
   const displayPrimaryMuscles = useMemo(() => {
@@ -208,27 +177,6 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
 
         {/* Right: Mode Selector, Speed & Playback Controls */}
         <div className="flex items-center gap-2">
-          {/* Real human exercise demonstrations (free; no API key required) */}
-          <button
-            type="button"
-            onClick={() => setShowVideoGuide(value => !value)}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border transition-all ${showVideoGuide ? 'bg-[#4edea3] text-[#003824] border-[#4edea3]' : 'bg-[#152336] text-[#4edea3] border-[#4edea3]/40'}`}
-            title="Show real human exercise demonstrations"
-          >
-            <span className="material-symbols-outlined text-[13px]">play_circle</span>
-            <span>{showVideoGuide ? 'Real Video' : 'Real Video'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setShowPoseSheet(value => !value); setShowVideoGuide(false); }}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border transition-all ${showPoseSheet ? 'bg-[#4edea3] text-[#003824] border-[#4edea3]' : 'bg-[#152336] text-[#4edea3] border-[#4edea3]/40'}`}
-            title="Open the included 30-pose realistic exercise reference sheet"
-          >
-            <span className="material-symbols-outlined text-[13px]">grid_view</span>
-            <span>Pose Library</span>
-          </button>
-
           {/* Animated Character (Default) vs Optional 3D View */}
           <div className="flex items-center bg-[#070f1a] rounded-xl p-0.5 border border-[#1f2a3c]">
             <button
@@ -352,68 +300,30 @@ export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
           <span className="text-[10px] text-[#86948a]">est.</span>
         </div>
 
-        {/* Curated video embeds only. If this exercise has no verified mapping, keep the animation visible. */}
-        {showPoseSheet ? (
-          <div className="relative z-10 mx-4 my-4 w-full max-w-4xl overflow-hidden rounded-2xl border border-[#4edea3]/30 bg-white shadow-2xl">
-            <div className="flex items-center justify-between gap-3 bg-[#081425] px-4 py-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4edea3]">FITORA Pose Library</p>
-                <p className="mt-1 text-xs text-[#d8e3fb]">30 realistic blue-shirt exercise poses · reference sheet</p>
-              </div>
-              <button type="button" onClick={() => setShowPoseSheet(false)} className="shrink-0 rounded-lg border border-[#4edea3]/30 px-3 py-2 text-xs font-bold text-[#4edea3]">Back to animation</button>
-            </div>
-            <div className="grid grid-cols-3 gap-2 bg-[#08121f] p-3 sm:grid-cols-5 md:grid-cols-6">
-              {Array.from({ length: 30 }, (_, i) => i + 1).map((pose) => (
-                <div key={pose} className="overflow-hidden rounded-lg border border-[#26364a] bg-[#111d2c] p-1">
-                  <img src={`/pose-${String(pose).padStart(2, '0')}.png`} alt={`FITORA exercise pose ${pose}`} loading="lazy" className="aspect-square w-full object-contain" />
-                  <p className="py-1 text-center text-[10px] text-[#d8e3fb]">Pose {pose}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : showVideoGuide && verifiedVideo ? (
-          <div className="relative z-10 mx-4 w-full max-w-3xl overflow-hidden rounded-2xl border border-[#4edea3]/30 bg-[#081425] shadow-2xl">
-            <div className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4edea3]">Verified exercise demonstration</p>
-                <h3 className="mt-1 truncate text-sm font-bold text-[#d8e3fb]">{verifiedVideo.title}</h3>
-                <p className="mt-1 text-[10px] text-[#86948a]">Source: {verifiedVideo.source}</p>
-              </div>
-              <button type="button" onClick={() => setShowVideoGuide(false)} className="shrink-0 rounded-lg border border-[#4edea3]/30 px-3 py-2 text-xs font-bold text-[#4edea3] hover:bg-[#4edea3]/10">Back to animation</button>
-            </div>
-            <div className="aspect-video w-full bg-black">
-              <iframe
-                className="h-full w-full"
-                src={`https://www.youtube-nocookie.com/embed/${verifiedVideo.id}?rel=0&playsinline=1`}
-                title={verifiedVideo.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        ) : showVideoGuide && !verifiedVideo ? (
-          <div className="relative z-10 mx-4 w-full max-w-xl rounded-2xl border border-[#4edea3]/30 bg-[#081425]/95 p-5 sm:p-7 text-center shadow-2xl">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#4edea3]/15 text-[#4edea3]">
-              <span className="material-symbols-outlined text-[32px]">smart_display</span>
-            </div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4edea3]">Video not mapped yet</p>
-            <h3 className="mt-2 text-lg font-bold text-[#d8e3fb]">{exerciseName}</h3>
-            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[#bbcabf]">We haven't added a verified video for this exact exercise yet. To avoid showing the wrong movement, use the animation for now.</p>
-            <button type="button" onClick={() => setShowVideoGuide(false)} className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-[#4edea3] px-5 py-3 text-sm font-bold text-[#003824] transition-colors hover:bg-[#6ffbbe]">Use FITORA animation</button>
-          </div>
-        ) : renderEngine === 'character' ? (
-          <FitoraCharacterAnimation type={type} exerciseName={exerciseName} motionProgress={motionProgress} isPeak={isPeak} />
+        {/* MAIN CLEAR ANIMATED FITNESS CHARACTER (DEFAULT) */}
+        {renderEngine === 'character' ? (
+          <FitoraCharacterAnimation
+            type={type}
+            motionProgress={motionProgress}
+            isPeak={isPeak}
+          />
         ) : (
-          <ExerciseAnimationModel type={type} motionProgress={motionProgress} cameraAngle={cameraAngle} isPeak={isPeak} onCameraChange={setCameraAngle} />
+          <ExerciseAnimationModel
+            type={type}
+            motionProgress={motionProgress}
+            cameraAngle={cameraAngle}
+            isPeak={isPeak}
+            onCameraChange={setCameraAngle}
+          />
         )}
 
-        {/* Cycle Progress Tracker for FITORA's generated animation */}
-        {!showVideoGuide && !showPoseSheet && (
-          <div className="absolute inset-x-0 bottom-0 h-1.5 bg-[#08101a]">
-            <div className="h-full bg-gradient-to-r from-[#4edea3] via-[#9ddf2e] to-[#ff3b5c] transition-all duration-75" style={{ width: `${Math.round(motionProgress * 100)}%` }} />
-          </div>
-        )}
+        {/* Cycle Progress Tracker at bottom of canvas */}
+        <div className="absolute inset-x-0 bottom-0 h-1.5 bg-[#08101a]">
+          <div
+            className="h-full bg-gradient-to-r from-[#4edea3] via-[#9ddf2e] to-[#ff3b5c] transition-all duration-75"
+            style={{ width: `${Math.round(motionProgress * 100)}%` }}
+          />
+        </div>
       </div>
 
       {/* ---------------- 3. SECONDARY MUSCLE HIGHLIGHT STRIP (CLEAN & SUBTLE) ---------------- */}
