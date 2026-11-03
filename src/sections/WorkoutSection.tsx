@@ -3,6 +3,7 @@ import { useFitMate } from '../context/FitMateContext';
 import { Exercise } from '../types';
 import { ExerciseSubstitutionModal } from '../components/ExerciseSubstitutionModal';
 import { ExerciseAnimation } from '../components/ExerciseAnimation';
+import { exerciseImageUrl } from '../data/exerciseDb';
 
 export const WorkoutSection: React.FC = () => {
   const {
@@ -155,14 +156,24 @@ export const WorkoutSection: React.FC = () => {
                 {/* Exercise Visual Photo */}
                 <div className="h-48 w-full relative overflow-hidden bg-[#111c2d]">
                   <img
-                    src={exercise.imageUrl}
-                    alt={exercise.name}
+                    src={exercise.images?.[0] ? exerciseImageUrl(exercise.images[0]) : exercise.imageUrl}
+                    alt={`${exercise.name}: start position`}
+                    loading="lazy"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
+                  {exercise.images?.[1] && (
+                    // Hovering shows the end position, so the card previews the movement
+                    <img
+                      src={exerciseImageUrl(exercise.images[1])}
+                      alt={`${exercise.name}: end position`}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#152031] via-transparent to-transparent" />
                   <div className="absolute top-3 right-3 bg-[#081425]/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#4edea3] border border-[#3c4a42]/50">
                     {exercise.difficulty}
@@ -260,8 +271,9 @@ export const WorkoutSection: React.FC = () => {
 
             {/* 3D Exercise Demonstration */}
             <ExerciseAnimation
-              type={inspectingExercise.animationType || 'row'}
               exerciseName={inspectingExercise.name}
+              exerciseDbId={inspectingExercise.exerciseDbId}
+              images={inspectingExercise.images}
               targetMuscle={inspectingExercise.targetMuscle}
               primaryMuscles={inspectingExercise.primaryMuscles}
               secondaryMuscles={inspectingExercise.secondaryMuscles}

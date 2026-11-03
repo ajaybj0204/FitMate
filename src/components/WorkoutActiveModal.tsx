@@ -211,8 +211,9 @@ export const WorkoutActiveModal: React.FC = () => {
 
             {/* 3D BIOMECHANICAL ANATOMICAL EXERCISE ANIMATION */}
             <ExerciseAnimation
-              type={currentExercise.animationType || 'row'}
               exerciseName={currentExercise.name}
+              exerciseDbId={currentExercise.exerciseDbId}
+              images={currentExercise.images}
               targetMuscle={currentExercise.targetMuscle}
               primaryMuscles={currentExercise.primaryMuscles}
               secondaryMuscles={currentExercise.secondaryMuscles}

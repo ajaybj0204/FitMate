@@ -144,6 +144,11 @@ export interface Exercise {
   formTips: string[];
   imageUrl: string;
   equipment: string;
+  /** Free Exercise DB id: links the exercise to its real start/end demo photos. */
+  exerciseDbId?: string;
+  /** Start and end position photos (library-relative paths or full URLs). */
+  images?: string[];
+  /** Legacy (pre-photo) animation key, kept so older saved plans still load. */
   animationType?: ExerciseAnimationType;
   substitutions?: ExerciseSubstitution[];
   defaultWeightKg?: number;

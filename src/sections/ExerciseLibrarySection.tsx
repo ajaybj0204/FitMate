@@ -1,275 +1,227 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { ExerciseAnimation } from '../components/ExerciseAnimation';
+import { LIBRARY_UI_TRANSLATIONS } from '../data/exerciseLibraryI18n';
 import {
-  EXERCISE_CATEGORIES,
-  EXERCISE_LIBRARY_DATABASE,
-  ExerciseCategoryMeta,
-} from '../data/exerciseLibraryData';
-import {
-  LIBRARY_UI_TRANSLATIONS,
-  LOCALIZED_EXERCISES,
-} from '../data/exerciseLibraryI18n';
-import {
-  BodyPartFilter,
-  DifficultyFilter,
-  EquipmentFilter,
-  ExerciseLibraryItem,
-  GoalFilter,
-  MovementTypeFilter,
-} from '../types/exerciseLibrary';
+  BODY_GROUPS,
+  DbExercise,
+  LEVEL_LABEL,
+  PHOTO_CREDIT,
+  bodyGroupOf,
+  categoryLabel,
+  equipmentLabel,
+  exercisePhotos,
+  loadExerciseDb,
+  popularRank,
+  titleCase,
+} from '../data/exerciseDb';
 import { Exercise } from '../types';
 
 interface ExerciseLibrarySectionProps {
   initialExerciseId?: string | null;
 }
 
-export const ExerciseLibrarySection: React.FC<ExerciseLibrarySectionProps> = ({
-  initialExerciseId = null,
-}) => {
-  const {
-    currentLanguage,
-    savedExerciseIds,
-    toggleFavoriteExercise,
-    isFavoriteExercise,
-    addExerciseToWorkoutDay,
-    workoutSchedule,
-    navigateTo,
-  } = useFitMate();
+const PAGE_SIZE = 24;
+type SortKey = 'popular' | 'name' | 'level-asc' | 'level-desc';
+const LEVEL_ORDER = { beginner: 0, intermediate: 1, expert: 2 } as const;
 
+/** Card photo: start position, crossfading to the end position on hover. */
+const CardPhoto: React.FC<{ ex: DbExercise }> = ({ ex }) => {
+  const [start, end] = exercisePhotos(ex);
+  return (
+    <div className="relative aspect-[3/2] w-full overflow-hidden rounded-2xl bg-[#0b1422]">
+      <img src={start} alt={`${ex.name}: start position`} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+      {end && (
+        <img
+          src={end}
+          alt={`${ex.name}: end position`}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-700 group-hover:scale-105 group-hover:opacity-100"
+        />
+      )}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
+      {end && (
+        <span className="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">
+          <span className="material-symbols-outlined text-[13px]">play_circle</span>
+          <span className="hidden [@media(hover:hover)]:inline">Hover to preview</span>
+          <span className="[@media(hover:hover)]:hidden">Tap for demo</span>
+        </span>
+      )}
+    </div>
+  );
+};
+
+export const ExerciseLibrarySection: React.FC<ExerciseLibrarySectionProps> = ({ initialExerciseId = null }) => {
+  const { currentLanguage, savedExerciseIds, toggleFavoriteExercise, isFavoriteExercise, addExerciseToWorkoutDay, workoutSchedule } = useFitMate();
   const ui = LIBRARY_UI_TRANSLATIONS[currentLanguage] || LIBRARY_UI_TRANSLATIONS.en;
 
-  // Navigation / View State
+  // Library data (loaded on demand)
+  const [db, setDb] = useState<DbExercise[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  useEffect(() => {
+    loadExerciseDb().then(setDb).catch(() => setLoadError(true));
+  }, []);
+
+  // View state
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(initialExerciseId);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-
-  // Filters State
-  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [bodyPartFilter, setBodyPartFilter] = useState<BodyPartFilter>('All');
-  const [goalFilter, setGoalFilter] = useState<GoalFilter>('All');
-  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>('All');
-  const [equipmentFilter, setEquipmentFilter] = useState<EquipmentFilter>('All');
-  const [movementTypeFilter, setMovementTypeFilter] = useState<MovementTypeFilter>('All');
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-
-  // "Add to Workout" Modal state
   const [isAddToWorkoutModalOpen, setIsAddToWorkoutModalOpen] = useState(false);
   const [targetWorkoutDayId, setTargetWorkoutDayId] = useState<string>(workoutSchedule[0]?.id || 'monday');
 
-  // Sync initial exercise if prop changes
-  useEffect(() => {
-    if (initialExerciseId) {
-      setSelectedExerciseId(initialExerciseId);
-    }
-  }, [initialExerciseId]);
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [groupId, setGroupId] = useState('all');
+  const [muscle, setMuscle] = useState('all');
+  const [equipment, setEquipment] = useState('all');
+  const [level, setLevel] = useState('all');
+  const [category, setCategory] = useState('all');
+  const [sort, setSort] = useState<SortKey>('popular');
+  const [visible, setVisible] = useState(PAGE_SIZE);
 
-  // Scroll to top when selecting an exercise
+  useEffect(() => {
+    if (initialExerciseId) setSelectedExerciseId(initialExerciseId);
+  }, [initialExerciseId]);
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [selectedExerciseId]);
+  // New filters start again from the first page
+  useEffect(() => setVisible(PAGE_SIZE), [searchQuery, groupId, muscle, equipment, level, category, sort, showOnlyFavorites]);
 
-  // Selected Exercise Object
-  const selectedExercise = useMemo(() => {
-    if (!selectedExerciseId) return null;
-    return EXERCISE_LIBRARY_DATABASE.find(e => e.id === selectedExerciseId) || null;
-  }, [selectedExerciseId]);
-
-  // Localized Content Helper
-  const getLocalizedExercise = (exercise: ExerciseLibraryItem) => {
-    const loc = LOCALIZED_EXERCISES[exercise.id]?.[currentLanguage];
+  const options = useMemo(() => {
+    const list = db || [];
+    const uniq = (xs: string[]) => [...new Set(xs)].sort();
     return {
-      name: loc?.name || exercise.name,
-      shortDescription: loc?.shortDescription || exercise.shortDescription,
-      simpleExplanation: loc?.simpleExplanation || exercise.simpleExplanation,
-      scientificExplanation: loc?.scientificExplanation || exercise.scientificExplanation,
-      instructions: loc?.instructions || exercise.instructions,
-      formTips: loc?.formTips || exercise.formTips,
-      commonMistakes: loc?.commonMistakes || exercise.commonMistakes,
-      safetyNotes: loc?.safetyNotes || exercise.safetyNotes,
-      benefits: loc?.benefits || exercise.benefits,
+      muscles: uniq(list.flatMap((e) => e.primaryMuscles)),
+      equipment: uniq(list.map((e) => e.equipment)),
+      categories: uniq(list.map((e) => e.category)),
     };
-  };
+  }, [db]);
 
-  // Filtered Exercises List
-  const filteredExercises = useMemo(() => {
-    return EXERCISE_LIBRARY_DATABASE.filter(ex => {
-      // Favorites filter
-      if (showOnlyFavorites && !savedExerciseIds.includes(ex.id)) {
-        return false;
+  const savedInLibrary = useMemo(() => (db ? db.filter((e) => savedExerciseIds.includes(e.id)).length : 0), [db, savedExerciseIds]);
+
+  const filtered = useMemo(() => {
+    if (!db) return [];
+    const q = searchQuery.trim().toLowerCase();
+    const group = BODY_GROUPS.find((g) => g.id === groupId);
+    const list = db.filter((ex) => {
+      if (showOnlyFavorites && !savedExerciseIds.includes(ex.id)) return false;
+      if (group && !ex.primaryMuscles.some((m) => group.muscles.includes(m))) return false;
+      if (muscle !== 'all' && !ex.primaryMuscles.includes(muscle)) return false;
+      if (equipment !== 'all' && ex.equipment !== equipment) return false;
+      if (level !== 'all' && ex.level !== level) return false;
+      if (category !== 'all' && ex.category !== category) return false;
+      if (q) {
+        const hay = `${ex.name} ${ex.primaryMuscles.join(' ')} ${ex.secondaryMuscles.join(' ')} ${ex.equipment} ${ex.category}`.toLowerCase();
+        if (!q.split(/\s+/).every((w) => hay.includes(w))) return false;
       }
-
-      // Category filter
-      if (selectedCategorySlug !== 'all') {
-        const matchesCategory =
-          ex.categorySlug === selectedCategorySlug ||
-          ex.category.toLowerCase().includes(selectedCategorySlug.toLowerCase()) ||
-          ex.bodyPart.toLowerCase().includes(selectedCategorySlug.toLowerCase());
-        if (!matchesCategory) return false;
-      }
-
-      // Search Query
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const loc = LOCALIZED_EXERCISES[ex.id]?.[currentLanguage];
-        const localizedName = loc?.name ? loc.name.toLowerCase() : '';
-        const matches =
-          ex.name.toLowerCase().includes(query) ||
-          localizedName.includes(query) ||
-          ex.primaryMuscles.some(m => m.toLowerCase().includes(query)) ||
-          ex.secondaryMuscles.some(m => m.toLowerCase().includes(query)) ||
-          ex.equipment.toLowerCase().includes(query) ||
-          ex.bodyPart.toLowerCase().includes(query) ||
-          ex.movementPattern.toLowerCase().includes(query) ||
-          ex.goals.some(g => g.toLowerCase().includes(query)) ||
-          ex.category.toLowerCase().includes(query);
-        if (!matches) return false;
-      }
-
-      // Body Part Filter
-      if (bodyPartFilter !== 'All' && ex.bodyPart !== bodyPartFilter) {
-        return false;
-      }
-
-      // Goal Filter
-      if (goalFilter !== 'All' && !ex.goals.includes(goalFilter)) {
-        return false;
-      }
-
-      // Difficulty Filter
-      if (difficultyFilter !== 'All' && ex.difficulty !== difficultyFilter) {
-        return false;
-      }
-
-      // Equipment Filter
-      if (equipmentFilter !== 'All' && ex.equipment !== equipmentFilter) {
-        return false;
-      }
-
-      // Movement Type Filter
-      if (movementTypeFilter !== 'All' && ex.exerciseType !== movementTypeFilter) {
-        return false;
-      }
-
       return true;
     });
-  }, [
-    showOnlyFavorites,
-    savedExerciseIds,
-    selectedCategorySlug,
-    searchQuery,
-    bodyPartFilter,
-    goalFilter,
-    difficultyFilter,
-    equipmentFilter,
-    movementTypeFilter,
-    currentLanguage,
-  ]);
+    if (sort === 'popular') list.sort((a, b) => popularRank(a.id) - popularRank(b.id) || a.name.localeCompare(b.name));
+    if (sort === 'level-asc') list.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || a.name.localeCompare(b.name));
+    if (sort === 'level-desc') list.sort((a, b) => LEVEL_ORDER[b.level] - LEVEL_ORDER[a.level] || a.name.localeCompare(b.name));
+    return list;
+  }, [db, searchQuery, groupId, muscle, equipment, level, category, sort, showOnlyFavorites, savedExerciseIds]);
 
-  // Active filter count
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (bodyPartFilter !== 'All') count++;
-    if (goalFilter !== 'All') count++;
-    if (difficultyFilter !== 'All') count++;
-    if (equipmentFilter !== 'All') count++;
-    if (movementTypeFilter !== 'All') count++;
-    if (selectedCategorySlug !== 'all') count++;
-    if (searchQuery.trim()) count++;
-    if (showOnlyFavorites) count++;
-    return count;
-  }, [
-    bodyPartFilter,
-    goalFilter,
-    difficultyFilter,
-    equipmentFilter,
-    movementTypeFilter,
-    selectedCategorySlug,
-    searchQuery,
-    showOnlyFavorites,
-  ]);
+  const activeFiltersCount = [groupId, muscle, equipment, level, category].filter((v) => v !== 'all').length + (showOnlyFavorites ? 1 : 0) + (searchQuery ? 1 : 0);
 
   const clearAllFilters = () => {
-    setSelectedCategorySlug('all');
     setSearchQuery('');
-    setBodyPartFilter('All');
-    setGoalFilter('All');
-    setDifficultyFilter('All');
-    setEquipmentFilter('All');
-    setMovementTypeFilter('All');
+    setGroupId('all');
+    setMuscle('all');
+    setEquipment('all');
+    setLevel('all');
+    setCategory('all');
     setShowOnlyFavorites(false);
   };
 
-  // Convert Library Item into a Routine Exercise Item
+  const selectedExercise = useMemo(() => (db && selectedExerciseId ? db.find((e) => e.id === selectedExerciseId) || null : null), [db, selectedExerciseId]);
+
   const handleConfirmAddToWorkout = () => {
     if (!selectedExercise) return;
+    const ex = selectedExercise;
     const routineExercise: Exercise = {
       id: `ex-lib-${Date.now()}`,
-      name: selectedExercise.name,
-      targetMuscle: selectedExercise.primaryMuscles.join(', '),
-      targetMuscles: selectedExercise.primaryMuscles,
-      primaryMuscles: selectedExercise.primaryMuscles,
-      secondaryMuscles: selectedExercise.secondaryMuscles,
-      difficulty: selectedExercise.difficulty,
-      sets: 3,
-      reps: selectedExercise.exerciseType === 'Cardio' ? '45s' : '10-12',
+      name: ex.name,
+      targetMuscle: ex.primaryMuscles.map(titleCase).join(', '),
+      targetMuscles: ex.primaryMuscles.map(titleCase),
+      primaryMuscles: ex.primaryMuscles.map(titleCase),
+      secondaryMuscles: ex.secondaryMuscles.map(titleCase),
+      difficulty: LEVEL_LABEL[ex.level],
+      sets: ex.category === 'stretching' ? 2 : 3,
+      reps: ex.category === 'stretching' ? '30s hold' : ex.category === 'cardio' ? '45s' : '10-12',
       restSeconds: 60,
-      instructions: selectedExercise.instructions[0] || 'Perform with controlled tempo and strict form.',
-      formTips: selectedExercise.formTips,
-      imageUrl: selectedExercise.imageUrl,
-      equipment: selectedExercise.equipment,
-      animationType: selectedExercise.animationType,
-      calorieEstimate: Math.round((selectedExercise.calorieBurnPerMin || 7) * 4),
+      instructions: ex.instructions.join(' '),
+      formTips: [],
+      imageUrl: exercisePhotos(ex)[0] || '',
+      equipment: equipmentLabel(ex.equipment),
+      exerciseDbId: ex.id,
+      images: ex.images,
+      calorieEstimate: ex.category === 'stretching' ? 10 : 30,
     };
-
     addExerciseToWorkoutDay(targetWorkoutDayId, routineExercise);
     setIsAddToWorkoutModalOpen(false);
   };
 
+  const selectCls =
+    'w-full bg-[#152031] border border-[#1f2a3c] focus:border-[#4edea3] rounded-xl px-3 py-2.5 text-xs text-[#d8e3fb] focus:outline-none cursor-pointer';
+
   // =========================================================================
-  // VIEW: INDIVIDUAL DETAILED EXERCISE VIEW
+  // LOADING / ERROR
+  // =========================================================================
+  if (loadError) {
+    return (
+      <div className="rounded-3xl border border-[#1f2a3c] bg-[#111c2d] p-10 text-center text-sm text-[#bbcabf]">
+        The exercise library could not be loaded. Check your internet connection and try again.
+      </div>
+    );
+  }
+
+  if (!db) {
+    return (
+      <div className="flex flex-col gap-6 pb-16">
+        <div className="h-36 animate-pulse rounded-3xl bg-[#111c2d]" />
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-80 animate-pulse rounded-3xl bg-[#111c2d]" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VIEW: EXERCISE DETAIL
   // =========================================================================
   if (selectedExercise) {
-    const loc = getLocalizedExercise(selectedExercise);
-    const isSaved = isFavoriteExercise(selectedExercise.id);
-    const relatedList = EXERCISE_LIBRARY_DATABASE.filter(ex =>
-      selectedExercise.relatedExerciseIds.includes(ex.id)
-    );
+    const ex = selectedExercise;
+    const isSaved = isFavoriteExercise(ex.id);
+    const group = bodyGroupOf(ex);
+    const related = db.filter((r) => r.id !== ex.id && r.primaryMuscles.some((m) => ex.primaryMuscles.includes(m))).sort((a, b) => Number(b.equipment === ex.equipment) - Number(a.equipment === ex.equipment)).slice(0, 6);
 
     return (
-      <div className="flex flex-col w-full gap-6 pb-16 animate-in fade-in duration-200">
-        {/* Top Back Navigation Bar */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex w-full flex-col gap-6 pb-16 animate-in fade-in duration-200">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <button
             onClick={() => setSelectedExerciseId(null)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#111c2d] hover:bg-[#1f2a3c] text-[#4edea3] hover:text-white border border-[#1f2a3c] text-xs sm:text-sm font-semibold transition-all shadow-md group"
+            className="group flex items-center gap-2 rounded-xl border border-[#1f2a3c] bg-[#111c2d] px-4 py-2.5 text-xs font-semibold text-[#4edea3] shadow-md transition-all hover:bg-[#1f2a3c] hover:text-white sm:text-sm"
           >
-            <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">
-              arrow_back
-            </span>
+            <span className="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-1">arrow_back</span>
             <span>{ui.backToLibrary}</span>
           </button>
-
           <div className="flex items-center gap-2.5">
-            {/* Favorite toggle */}
             <button
-              onClick={() => toggleFavoriteExercise(selectedExercise.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
-                isSaved
-                  ? 'bg-[#ff6b4a]/20 border-[#ff6b4a] text-[#ffb4ab] shadow-sm shadow-[#ff6b4a]/30'
-                  : 'bg-[#152031] border-[#1f2a3c] text-[#bbcabf] hover:text-white hover:bg-[#1f2a3c]'
+              onClick={() => toggleFavoriteExercise(ex.id)}
+              className={`flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all ${
+                isSaved ? 'border-[#ff6b4a] bg-[#ff6b4a]/20 text-[#ffb4ab] shadow-sm shadow-[#ff6b4a]/30' : 'border-[#1f2a3c] bg-[#152031] text-[#bbcabf] hover:bg-[#1f2a3c] hover:text-white'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                {isSaved ? 'favorite' : 'favorite_border'}
-              </span>
+              <span className="material-symbols-outlined text-[18px]">{isSaved ? 'favorite' : 'favorite_border'}</span>
               <span>{isSaved ? ui.inFavorites : ui.addToFavorites}</span>
             </button>
-
-            {/* Add to workout routine button */}
             <button
               onClick={() => setIsAddToWorkoutModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] text-xs sm:text-sm font-extrabold transition-all shadow-md shadow-[#4edea3]/20 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-1.5 rounded-xl bg-[#4edea3] px-4 py-2 text-xs font-extrabold text-[#003824] shadow-md shadow-[#4edea3]/20 transition-all hover:scale-[1.02] hover:bg-[#6ffbbe] active:scale-[0.98] sm:text-sm"
             >
               <span className="material-symbols-outlined text-[18px]">add_circle</span>
               <span>{ui.addToWorkout}</span>
@@ -277,445 +229,102 @@ export const ExerciseLibrarySection: React.FC<ExerciseLibrarySectionProps> = ({
           </div>
         </div>
 
-        {/* HERO EXERCISE BANNER */}
-        <div className="bg-[#111c2d] rounded-3xl p-6 sm:p-8 border border-[#1f2a3c] shadow-2xl relative overflow-hidden flex flex-col gap-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#10b981]/20 text-[#4edea3] border border-[#4edea3]/30">
-              {selectedExercise.category}
-            </span>
-            <span className="text-xs text-[#86948a] font-medium">•</span>
-            <span className="text-xs font-bold text-[#d8e3fb]">
-              {selectedExercise.bodyPart}
-            </span>
-            <span className="text-xs text-[#86948a] font-medium">•</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-lg bg-[#152031] text-[#9ddf2e] border border-[#1f2a3c] font-semibold">
-              {selectedExercise.difficulty}
-            </span>
-            <span className="text-xs text-[#86948a] font-medium">•</span>
-            <span className="text-xs text-[#bbcabf]">
-              {ui.movementPatternLabel}: <strong className="text-[#d8e3fb]">{selectedExercise.movementPattern}</strong>
-            </span>
+        <div className="relative flex flex-col gap-3 overflow-hidden rounded-3xl border border-[#1f2a3c] bg-[#111c2d] p-6 shadow-2xl sm:p-8">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#4edea3]/10 blur-3xl" />
+          <div className="relative flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-[#4edea3]/30 bg-[#10b981]/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#4edea3]">{categoryLabel(ex.category)}</span>
+            {group && <span className="text-xs font-bold text-[#d8e3fb]">{group.emoji} {group.name}</span>}
+            <span className="rounded-lg border border-[#1f2a3c] bg-[#152031] px-2 py-0.5 text-[11px] font-bold text-[#bbcabf]">{LEVEL_LABEL[ex.level]}</span>
+            {ex.mechanic && <span className="rounded-lg border border-[#1f2a3c] bg-[#152031] px-2 py-0.5 text-[11px] font-bold text-[#bbcabf]">{titleCase(ex.mechanic)}</span>}
+            {ex.force && <span className="rounded-lg border border-[#1f2a3c] bg-[#152031] px-2 py-0.5 text-[11px] font-bold text-[#bbcabf]">{titleCase(ex.force)}</span>}
           </div>
-
-          <h1 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#d8e3fb] tracking-tight">
-            {loc.name}
-          </h1>
-
-          <p className="text-sm sm:text-base text-[#bbcabf] max-w-3xl leading-relaxed">
-            {loc.shortDescription}
-          </p>
-
-          {/* Quick Specifications Pill Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#1f2a3c]/60">
-            <div className="bg-[#0c1421] p-3 rounded-2xl border border-[#1f2a3c]">
-              <span className="text-[10px] text-[#86948a] uppercase font-bold block">{ui.equipment}</span>
-              <span className="font-headline text-sm font-bold text-[#d8e3fb] mt-0.5 block">
-                {selectedExercise.equipment}
-              </span>
-            </div>
-            <div className="bg-[#0c1421] p-3 rounded-2xl border border-[#1f2a3c]">
-              <span className="text-[10px] text-[#86948a] uppercase font-bold block">{ui.difficulty}</span>
-              <span className="font-headline text-sm font-bold text-[#4edea3] mt-0.5 block">
-                {selectedExercise.difficulty}
-              </span>
-              <span className="text-[10px] text-[#86948a] truncate block" title={selectedExercise.difficultyReason}>
-                {selectedExercise.difficultyReason}
-              </span>
-            </div>
-            <div className="bg-[#0c1421] p-3 rounded-2xl border border-[#1f2a3c]">
-              <span className="text-[10px] text-[#86948a] uppercase font-bold block">{ui.movementType}</span>
-              <span className="font-headline text-sm font-bold text-[#9ddf2e] mt-0.5 block">
-                {selectedExercise.exerciseType}
-              </span>
-            </div>
-            <div className="bg-[#0c1421] p-3 rounded-2xl border border-[#1f2a3c]">
-              <span className="text-[10px] text-[#86948a] uppercase font-bold block">Burn Rate (est.)</span>
-              <span className="font-headline text-sm font-bold text-[#ff897d] mt-0.5 block tabular-nums">
-                ~{selectedExercise.calorieBurnPerMin || 7} kcal/min
-              </span>
-            </div>
-          </div>
+          <h1 className="relative font-headline text-3xl font-extrabold tracking-tight text-[#d8e3fb] sm:text-4xl">{ex.name}</h1>
         </div>
 
-        {/* 3D BIOMECHANICAL ANIMATION DEMONSTRATION SECTION */}
-        <div className="bg-[#111c2d] rounded-3xl p-4 sm:p-6 border border-[#1f2a3c] shadow-2xl">
-          <div className="flex items-center justify-between mb-4 px-2">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#4edea3] text-[22px]">
-                accessibility_new
-              </span>
-              <h2 className="font-headline text-lg sm:text-xl font-bold text-[#d8e3fb]">
-                Human Exercise Demonstration
-              </h2>
-            </div>
-            <span className="text-xs text-[#4edea3] bg-[#0c1421] px-3 py-1 rounded-full border border-[#4edea3]/30 font-semibold">
-              Realistic 3D Athlete
-            </span>
-          </div>
-
+        <div className="mx-auto w-full max-w-3xl">
           <ExerciseAnimation
-            type={selectedExercise.animationType || 'squat'}
-            exerciseName={selectedExercise.name}
-            targetMuscle={selectedExercise.primaryMuscles.join(', ')}
-            primaryMuscles={selectedExercise.primaryMuscles}
-            secondaryMuscles={selectedExercise.secondaryMuscles}
-            equipment={selectedExercise.equipment}
-            instructions={loc.instructions[0] || 'Perform movement with strict control.'}
-            formTips={loc.formTips}
-            calorieEstimate={Math.round((selectedExercise.calorieBurnPerMin || 7) * 4)}
-            photoUrl={selectedExercise.imageUrl}
+            exerciseName={ex.name}
+            exerciseDbId={ex.id}
+            images={ex.images}
+            primaryMuscles={ex.primaryMuscles}
+            secondaryMuscles={ex.secondaryMuscles}
+            equipment={equipmentLabel(ex.equipment)}
+            instructions={ex.instructions}
             mode="library"
           />
         </div>
 
-        {/* TWO-COLUMN INSTRUCTIONS & FORM CUES */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column (7 cols): Step-by-Step Instructions */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
-            {/* Step-by-Step Instructions */}
-            <div className="bg-[#111c2d] rounded-3xl p-6 sm:p-8 border border-[#1f2a3c] shadow-xl">
-              <div className="flex items-center gap-2.5 mb-5 pb-3 border-b border-[#1f2a3c]">
-                <div className="w-8 h-8 rounded-lg bg-[#4edea3]/10 text-[#4edea3] flex items-center justify-center font-bold">
-                  <span className="material-symbols-outlined text-[20px]">format_list_numbered</span>
-                </div>
-                <h3 className="font-headline text-lg sm:text-xl font-bold text-[#d8e3fb]">
-                  {ui.instructionsTitle}
-                </h3>
-              </div>
-
-              <ol className="flex flex-col gap-4">
-                {loc.instructions.map((step, idx) => (
-                  <li key={idx} className="flex items-start gap-3.5 text-xs sm:text-sm text-[#d8e3fb] leading-relaxed">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#152336] text-[#4edea3] font-extrabold text-xs shrink-0 border border-[#4edea3]/30 mt-0.5">
-                      {idx + 1}
-                    </span>
-                    <span className="flex-1">{step}</span>
-                  </li>
-                ))}
-              </ol>
-
-              {/* Equipment Alternatives where applicable */}
-              {selectedExercise.equipmentAlternatives.length > 0 && (
-                <div className="mt-6 pt-5 border-t border-[#1f2a3c]/60">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#86948a] flex items-center gap-1.5 mb-2">
-                    <span className="material-symbols-outlined text-[16px] text-[#4edea3]">swap_horizontal_circle</span>
-                    {ui.equipmentAlternatives}
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedExercise.equipmentAlternatives.map((alt, i) => (
-                      <span
-                        key={i}
-                        className="text-xs px-3 py-1.5 rounded-xl bg-[#0c1421] text-[#bbcabf] border border-[#1f2a3c]"
-                      >
-                        {alt}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* SCIENTIFIC EXPLANATION: WHY THIS EXERCISE MATTERS */}
-            <div className="bg-[#111c2d] rounded-3xl p-6 sm:p-8 border border-[#1f2a3c] shadow-xl flex flex-col gap-6">
-              <div className="flex items-center gap-2.5 pb-3 border-b border-[#1f2a3c]">
-                <div className="w-8 h-8 rounded-lg bg-[#9ddf2e]/10 text-[#9ddf2e] flex items-center justify-center font-bold">
-                  <span className="material-symbols-outlined text-[20px]">psychology</span>
-                </div>
-                <div>
-                  <h3 className="font-headline text-lg sm:text-xl font-bold text-[#d8e3fb]">
-                    {ui.whyItMattersTitle}
-                  </h3>
-                  <span className="text-xs text-[#86948a]">Physiological breakdown &amp; real-world translation</span>
-                </div>
-              </div>
-
-              {/* Simple Real-World Explanation */}
-              <div className="bg-[#0b1420] p-4 sm:p-5 rounded-2xl border border-[#1f2a3c]">
-                <span className="text-xs font-bold text-[#4edea3] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                  <span className="material-symbols-outlined text-[16px]">lightbulb</span>
-                  {ui.simpleExplanationTitle}
-                </span>
-                <p className="text-xs sm:text-sm text-[#bbcabf] leading-relaxed">
-                  {loc.simpleExplanation}
-                </p>
-              </div>
-
-              {/* Scientific & Biomechanical Explanation */}
-              <div className="bg-[#0b1420] p-4 sm:p-5 rounded-2xl border border-[#9ddf2e]/30">
-                <span className="text-xs font-bold text-[#9ddf2e] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                  <span className="material-symbols-outlined text-[16px]">science</span>
-                  {ui.scientificExplanationTitle}
-                </span>
-                <p className="text-xs sm:text-sm text-[#d8e3fb] leading-relaxed">
-                  {loc.scientificExplanation}
-                </p>
-              </div>
-
-              {/* Key Benefits List */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#d8e3fb] mb-3 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-[#4edea3]">check_circle</span>
-                  {ui.benefitsTitle}
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {loc.benefits.map((b, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-2 bg-[#152336]/60 p-3 rounded-xl border border-[#1f2a3c] text-xs text-[#bbcabf]"
-                    >
-                      <span className="material-symbols-outlined text-[#4edea3] text-[16px] shrink-0 mt-0.5">
-                        verified
-                      </span>
-                      <span>{b}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Peer-Reviewed Scientific References */}
-              {selectedExercise.references.length > 0 && (
-                <div className="pt-4 border-t border-[#1f2a3c]/60">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#86948a] flex items-center gap-1 mb-2">
-                    <span className="material-symbols-outlined text-[14px]">menu_book</span>
-                    {ui.referencesTitle}
-                  </span>
-                  <ul className="flex flex-col gap-1.5">
-                    {selectedExercise.references.map((ref, i) => (
-                      <li key={i} className="text-[11px] text-[#86948a] italic leading-snug">
-                        • {ref}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column (5 cols): Form Tips, Common Mistakes, Safety, Muscles */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            {/* Primary & Secondary Muscles Card */}
-            <div className="bg-[#111c2d] rounded-3xl p-6 border border-[#1f2a3c] shadow-xl">
-              <h4 className="font-headline text-base font-bold text-[#d8e3fb] mb-3 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#4edea3] text-[20px]">fitness_center</span>
-                Anatomical Engagement
-              </h4>
-
-              <div className="space-y-4">
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#4edea3] block mb-1.5">
-                    {ui.primary} Muscles Worked
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedExercise.primaryMuscles.map((m, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 rounded-lg bg-[#4edea3]/15 text-[#4edea3] font-bold text-xs border border-[#4edea3]/30"
-                      >
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#86948a] block mb-1.5">
-                    {ui.secondary} Stabilizers &amp; Assisting
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedExercise.secondaryMuscles.map((m, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 rounded-lg bg-[#152336] text-[#bbcabf] font-medium text-xs border border-[#1f2a3c]"
-                      >
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Form & Technique Tips */}
-            <div className="bg-[#111c2d] rounded-3xl p-6 border border-[#1f2a3c] shadow-xl">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#1f2a3c]">
-                <span className="material-symbols-outlined text-[#4edea3] text-[20px]">task_alt</span>
-                <h4 className="font-headline text-base font-bold text-[#d8e3fb]">
-                  {ui.formTipsTitle}
-                </h4>
-              </div>
-
-              <ul className="flex flex-col gap-2.5">
-                {loc.formTips.map((tip, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5 text-xs text-[#d8e3fb] leading-relaxed">
-                    <span className="material-symbols-outlined text-[#4edea3] text-[16px] shrink-0 mt-0.5">
-                      check
-                    </span>
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Common Mistakes to Avoid */}
-            <div className="bg-[#111c2d] rounded-3xl p-6 border border-[#ffb4ab]/30 shadow-xl">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#1f2a3c]">
-                <span className="material-symbols-outlined text-[#ffb4ab] text-[20px]">cancel</span>
-                <h4 className="font-headline text-base font-bold text-[#ffb4ab]">
-                  {ui.commonMistakesTitle}
-                </h4>
-              </div>
-
-              <ul className="flex flex-col gap-2.5">
-                {loc.commonMistakes.map((mistake, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5 text-xs text-[#bbcabf] leading-relaxed">
-                    <span className="material-symbols-outlined text-[#ffb4ab] text-[16px] shrink-0 mt-0.5">
-                      close
-                    </span>
-                    <span>{mistake}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Safety & Clinical Considerations */}
-            <div className="bg-[#101e18] p-5 rounded-3xl border border-[#4edea3]/40 shadow-xl flex items-start gap-3">
-              <span className="material-symbols-outlined text-[#4edea3] text-[22px] shrink-0 mt-0.5">
-                health_and_safety
-              </span>
-              <div>
-                <h5 className="font-headline text-xs font-bold text-[#4edea3] uppercase tracking-wider mb-1">
-                  {ui.safetyTitle}
-                </h5>
-                <p className="text-xs text-[#bbcabf] leading-relaxed">
-                  {loc.safetyNotes}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RELATED EXERCISES SECTION */}
-        {relatedList.length > 0 && (
-          <div className="mt-8 pt-6 border-t border-[#1f2a3c]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-headline text-xl font-bold text-[#d8e3fb] flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#4edea3]">dataset</span>
-                {ui.relatedTitle}
-              </h3>
-              <span className="text-xs text-[#86948a]">Alternative progressions &amp; complementary movements</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {relatedList.map(rel => (
-                <div
-                  key={rel.id}
-                  onClick={() => setSelectedExerciseId(rel.id)}
-                  className="bg-[#111c2d] hover:bg-[#152031] p-4 rounded-2xl border border-[#1f2a3c] hover:border-[#4edea3]/40 cursor-pointer transition-all hover:-translate-y-1 shadow-md group flex flex-col justify-between gap-3"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#152336] text-[#4edea3] border border-[#1f2a3c]">
-                        {rel.difficulty}
-                      </span>
-                      <span className="text-[10px] text-[#86948a]">{rel.equipment}</span>
-                    </div>
-                    <h4 className="font-headline text-sm font-bold text-[#d8e3fb] group-hover:text-[#4edea3] transition-colors">
-                      {rel.name}
-                    </h4>
-                    <p className="text-[11px] text-[#86948a] line-clamp-2 mt-1">
-                      {rel.shortDescription}
-                    </p>
-                  </div>
-
-                  <div className="text-xs text-[#4edea3] font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    <span>{ui.viewExercise}</span>
-                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                  </div>
-                </div>
+        {related.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <h2 className="font-headline text-lg font-bold text-[#d8e3fb]">{ui.relatedTitle}</h2>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {related.map((r) => (
+                <button key={r.id} onClick={() => setSelectedExerciseId(r.id)} className="group flex flex-col gap-2 rounded-2xl border border-[#1f2a3c] bg-[#111c2d] p-2.5 text-left transition-all hover:border-[#4edea3]/40">
+                  <CardPhoto ex={r} />
+                  <span className="px-1 text-xs font-bold text-[#d8e3fb] group-hover:text-[#4edea3]">{r.name}</span>
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Bottom Back Button & Medical Disclaimer */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-[#1f2a3c]">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-[#1f2a3c] pt-6 sm:flex-row">
           <button
             onClick={() => setSelectedExerciseId(null)}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#111c2d] hover:bg-[#1f2a3c] text-[#4edea3] hover:text-white border border-[#1f2a3c] text-sm font-bold transition-all"
+            className="flex items-center gap-2 rounded-xl border border-[#1f2a3c] bg-[#111c2d] px-5 py-3 text-sm font-bold text-[#4edea3] transition-all hover:bg-[#1f2a3c] hover:text-white"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             <span>{ui.backToLibrary}</span>
           </button>
-
-          <p className="text-[11px] text-[#86948a] max-w-xl text-center sm:text-right leading-relaxed italic">
-            {ui.disclaimerText}
-          </p>
+          <p className="max-w-xl text-center text-[11px] italic leading-relaxed text-[#86948a] sm:text-right">{ui.disclaimerText}</p>
         </div>
 
-        {/* ADD TO WORKOUT MODAL */}
         {isAddToWorkoutModalOpen && (
-          <div className="fixed inset-0 bg-[#060c16]/90 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-[#111c2d] rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl border border-[#4edea3]/40 my-auto animate-in fade-in zoom-in-95">
-              <div className="flex items-center justify-between pb-4 border-b border-[#1f2a3c] mb-5">
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#060c16]/90 p-4 backdrop-blur-md">
+            <div className="my-auto w-full max-w-md rounded-3xl border border-[#4edea3]/40 bg-[#111c2d] p-6 shadow-2xl animate-in fade-in zoom-in-95 sm:p-8">
+              <div className="mb-5 flex items-center justify-between border-b border-[#1f2a3c] pb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-[#4edea3]/20 text-[#4edea3] flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4edea3]/20 text-[#4edea3]">
                     <span className="material-symbols-outlined text-[24px]">fitness_center</span>
                   </div>
                   <div>
-                    <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">
-                      {ui.addToWorkout}
-                    </h3>
+                    <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">{ui.addToWorkout}</h3>
                     <p className="text-xs text-[#86948a]">Select target day in your weekly schedule</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsAddToWorkoutModalOpen(false)}
-                  className="text-[#86948a] hover:text-[#d8e3fb] p-1"
-                >
+                <button onClick={() => setIsAddToWorkoutModalOpen(false)} className="p-1 text-[#86948a] hover:text-[#d8e3fb]" aria-label="Close">
                   <span className="material-symbols-outlined text-[20px]">close</span>
                 </button>
               </div>
-
               <div className="mb-6">
-                <label className="text-xs font-bold text-[#d8e3fb] block mb-2">
-                  {ui.selectWorkoutDay}
-                </label>
-                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
-                  {workoutSchedule.map(day => (
+                <label className="mb-2 block text-xs font-bold text-[#d8e3fb]">{ui.selectWorkoutDay}</label>
+                <div className="flex max-h-60 flex-col gap-2 overflow-y-auto pr-1">
+                  {workoutSchedule.map((day) => (
                     <button
                       key={day.id}
                       onClick={() => setTargetWorkoutDayId(day.id)}
-                      className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                        targetWorkoutDayId === day.id
-                          ? 'bg-[#4edea3]/15 border-[#4edea3] text-[#4edea3] font-bold shadow-md shadow-[#4edea3]/10'
-                          : 'bg-[#152031] border-[#1f2a3c] text-[#bbcabf] hover:bg-[#1f2a3c]'
+                      className={`flex items-center justify-between rounded-xl border p-3 text-left transition-all ${
+                        targetWorkoutDayId === day.id ? 'border-[#4edea3] bg-[#4edea3]/15 font-bold text-[#4edea3] shadow-md shadow-[#4edea3]/10' : 'border-[#1f2a3c] bg-[#152031] text-[#bbcabf] hover:bg-[#1f2a3c]'
                       }`}
                     >
                       <div>
-                        <div className="text-xs font-bold">{day.dayName} • {day.splitName}</div>
-                        <div className="text-[10px] text-[#86948a]">{day.focus} ({day.exercises.length} exercises)</div>
+                        <div className="text-xs font-bold">
+                          {day.dayName} • {day.splitName}
+                        </div>
+                        <div className="text-[10px] text-[#86948a]">
+                          {day.focus} ({day.exercises.length} exercises)
+                        </div>
                       </div>
-                      {targetWorkoutDayId === day.id && (
-                        <span className="material-symbols-outlined text-[18px] text-[#4edea3]">
-                          check_circle
-                        </span>
-                      )}
+                      {targetWorkoutDayId === day.id && <span className="material-symbols-outlined text-[18px] text-[#4edea3]">check_circle</span>}
                     </button>
                   ))}
                 </div>
               </div>
-
               <div className="flex gap-2.5">
-                <button
-                  onClick={() => setIsAddToWorkoutModalOpen(false)}
-                  className="flex-1 py-3 px-4 rounded-xl bg-[#152031] text-[#bbcabf] text-xs font-bold hover:bg-[#1f2a3c]"
-                >
+                <button onClick={() => setIsAddToWorkoutModalOpen(false)} className="flex-1 rounded-xl bg-[#152031] px-4 py-3 text-xs font-bold text-[#bbcabf] hover:bg-[#1f2a3c]">
                   Cancel
                 </button>
-                <button
-                  onClick={handleConfirmAddToWorkout}
-                  className="flex-1 py-3 px-4 rounded-xl bg-[#4edea3] text-[#003824] text-xs font-extrabold hover:bg-[#6ffbbe] shadow-lg shadow-[#4edea3]/20"
-                >
+                <button onClick={handleConfirmAddToWorkout} className="flex-1 rounded-xl bg-[#4edea3] px-4 py-3 text-xs font-extrabold text-[#003824] shadow-lg shadow-[#4edea3]/20 hover:bg-[#6ffbbe]">
                   Confirm &amp; Schedule
                 </button>
               </div>
@@ -727,385 +336,223 @@ export const ExerciseLibrarySection: React.FC<ExerciseLibrarySectionProps> = ({
   }
 
   // =========================================================================
-  // VIEW: MAIN EXERCISE LIBRARY DIRECTORY
+  // VIEW: LIBRARY DIRECTORY
   // =========================================================================
-  return (
-    <div className="flex flex-col w-full gap-8 pb-16">
-      {/* HEADER BANNER */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-[#111c2d] p-6 sm:p-8 rounded-3xl border border-[#1f2a3c] shadow-2xl relative overflow-hidden">
-        {/* Glow accent */}
-        <div className="absolute -top-24 -right-24 w-80 h-80 bg-[#4edea3]/10 rounded-full blur-3xl pointer-events-none" />
+  const shown = filtered.slice(0, visible);
 
+  return (
+    <div className="flex w-full flex-col gap-8 pb-16">
+      {/* HEADER */}
+      <div className="relative flex flex-col justify-between gap-4 overflow-hidden rounded-3xl border border-[#1f2a3c] bg-[#111c2d] p-6 shadow-2xl sm:p-8 md:flex-row md:items-end">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#4edea3]/10 blur-3xl" />
         <div className="relative z-10 max-w-2xl">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#10b981]/20 text-[#4edea3] border border-[#4edea3]/30">
-              FITORA Knowledge Base
-            </span>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-[#4edea3]/30 bg-[#10b981]/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#4edea3]">Real trainer demos</span>
             <span className="text-xs text-[#86948a]">
-              {ui.exerciseCountPrefix} <strong className="text-[#4edea3]">{filteredExercises.length}</strong> {ui.exerciseCountSuffix}
+              {ui.exerciseCountPrefix} <strong className="text-[#4edea3]">{filtered.length}</strong> {ui.exerciseCountSuffix}
             </span>
           </div>
-
-          <h1 className="font-headline text-3xl sm:text-4xl font-extrabold text-[#d8e3fb] tracking-tight">
-            {ui.title}
-          </h1>
-
-          <p className="text-xs sm:text-sm text-[#bbcabf] mt-1.5 leading-relaxed">
-            {ui.subtitle}
+          <h1 className="font-headline text-3xl font-extrabold tracking-tight text-[#d8e3fb] sm:text-4xl">{ui.title}</h1>
+          <p className="mt-1.5 text-xs leading-relaxed text-[#bbcabf] sm:text-sm">
+            {db.length} exercises, each shown by a real trainer from start to finish position. Open any exercise to watch the demo.
           </p>
         </div>
-
-        {/* Saved Favorites Quick Filter Toggle */}
-        <div className="relative z-10 flex items-center gap-2">
+        <div className="relative z-10">
           <button
-            onClick={() => setShowOnlyFavorites(prev => !prev)}
-            className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold border transition-all ${
-              showOnlyFavorites
-                ? 'bg-[#ff6b4a] text-white border-[#ff6b4a] shadow-lg shadow-[#ff6b4a]/25'
-                : 'bg-[#152031] text-[#bbcabf] hover:text-[#d8e3fb] border-[#1f2a3c] hover:bg-[#1f2a3c]'
+            onClick={() => setShowOnlyFavorites((p) => !p)}
+            className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-xs font-bold transition-all sm:text-sm ${
+              showOnlyFavorites ? 'border-[#ff6b4a] bg-[#ff6b4a] text-white shadow-lg shadow-[#ff6b4a]/25' : 'border-[#1f2a3c] bg-[#152031] text-[#bbcabf] hover:bg-[#1f2a3c] hover:text-[#d8e3fb]'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">
-              {showOnlyFavorites ? 'favorite' : 'favorite_border'}
-            </span>
+            <span className="material-symbols-outlined text-[18px]">{showOnlyFavorites ? 'favorite' : 'favorite_border'}</span>
             <span>{ui.mySavedExercises}</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
-              showOnlyFavorites ? 'bg-white/20 text-white' : 'bg-[#111c2d] text-[#4edea3]'
-            }`}>
-              {savedExerciseIds.length}
-            </span>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${showOnlyFavorites ? 'bg-white/20 text-white' : 'bg-[#111c2d] text-[#4edea3]'}`}>{savedInLibrary}</span>
           </button>
         </div>
       </div>
 
-      {/* TOP SEARCH BAR */}
+      {/* SEARCH */}
       <div className="relative w-full">
-        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#4edea3] text-[22px]">
-          search
-        </span>
+        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[22px] text-[#4edea3]">search</span>
         <input
           type="text"
           value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
+          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={ui.searchPlaceholder}
-          className="w-full bg-[#111c2d] border border-[#1f2a3c] focus:border-[#4edea3] rounded-2xl pl-12 pr-10 py-4 text-sm text-[#d8e3fb] placeholder-[#86948a] shadow-lg focus:outline-none transition-all"
+          className="w-full rounded-2xl border border-[#1f2a3c] bg-[#111c2d] py-4 pl-12 pr-10 text-sm text-[#d8e3fb] placeholder-[#86948a] shadow-lg transition-all focus:border-[#4edea3] focus:outline-none"
         />
         {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#86948a] hover:text-[#d8e3fb] p-1"
-          >
+          <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-[#86948a] hover:text-[#d8e3fb]" aria-label="Clear search">
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         )}
       </div>
 
-      {/* HORIZONTAL CATEGORIES CAROUSEL RIBBON */}
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs uppercase font-extrabold tracking-wider text-[#86948a]">
-            Exercise Categories
-          </span>
-          <span className="text-xs text-[#4edea3] font-semibold">
-            {EXERCISE_CATEGORIES.length} Categories
-          </span>
-        </div>
-
-        <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-[#1f2a3c]">
-          {EXERCISE_CATEGORIES.map(cat => {
-            const isSelected = selectedCategorySlug === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategorySlug(cat.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shrink-0 border ${
-                  isSelected
-                    ? 'bg-[#4edea3] text-[#003824] border-[#4edea3] shadow-lg shadow-[#4edea3]/20 scale-[1.02]'
-                    : 'bg-[#111c2d] text-[#bbcabf] border-[#1f2a3c] hover:bg-[#152031] hover:text-[#d8e3fb]'
-                }`}
-                title={cat.description}
-              >
-                <span>{cat.emoji}</span>
-                <span>{cat.name}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* BODY-PART CHIPS */}
+      <div className="flex gap-2.5 overflow-x-auto pb-2">
+        {[{ id: 'all', name: ui.allCategories, emoji: '✨' }, ...BODY_GROUPS].map((g) => (
+          <button
+            key={g.id}
+            onClick={() => {
+              setGroupId(g.id);
+              setMuscle('all');
+            }}
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border px-4 py-2.5 text-xs font-bold transition-all ${
+              groupId === g.id ? 'scale-[1.02] border-[#4edea3] bg-[#4edea3] text-[#003824] shadow-lg shadow-[#4edea3]/20' : 'border-[#1f2a3c] bg-[#111c2d] text-[#bbcabf] hover:bg-[#152031] hover:text-[#d8e3fb]'
+            }`}
+          >
+            <span>{g.emoji}</span>
+            <span>{g.name}</span>
+          </button>
+        ))}
       </div>
 
-      {/* COMPREHENSIVE FILTER STRIP (DESKTOP & MOBILE ACCORDION) */}
-      <div className="bg-[#111c2d] p-4 sm:p-5 rounded-2xl border border-[#1f2a3c] shadow-xl flex flex-col gap-4">
+      {/* FILTERS */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#1f2a3c] bg-[#111c2d] p-4 shadow-xl sm:p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4edea3] text-[20px]">tune</span>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#d8e3fb]">
-              {ui.filterBy}
-            </span>
-            {activeFiltersCount > 0 && (
-              <span className="text-[10px] bg-[#4edea3] text-[#003824] px-2 py-0.5 rounded-full font-extrabold">
-                {activeFiltersCount} Active
-              </span>
-            )}
+            <span className="material-symbols-outlined text-[20px] text-[#4edea3]">tune</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#d8e3fb]">{ui.filterBy}</span>
+            {activeFiltersCount > 0 && <span className="rounded-full bg-[#4edea3] px-2 py-0.5 text-[10px] font-extrabold text-[#003824]">{activeFiltersCount} Active</span>}
           </div>
-
-          <div className="flex items-center gap-3">
-            {activeFiltersCount > 0 && (
-              <button
-                onClick={clearAllFilters}
-                className="text-xs text-[#ffb4ab] hover:underline transition-colors flex items-center gap-1 font-semibold"
-              >
-                <span className="material-symbols-outlined text-[14px]">restart_alt</span>
-                <span>{ui.clearFilters}</span>
-              </button>
-            )}
-
-            {/* Mobile Filter Toggle */}
-            <button
-              onClick={() => setIsMobileFiltersOpen(prev => !prev)}
-              className="sm:hidden text-xs text-[#4edea3] font-bold flex items-center gap-1"
-            >
-              <span>{isMobileFiltersOpen ? 'Hide' : 'Expand'}</span>
-              <span className="material-symbols-outlined text-[16px]">
-                {isMobileFiltersOpen ? 'expand_less' : 'expand_more'}
-              </span>
+          {activeFiltersCount > 0 && (
+            <button onClick={clearAllFilters} className="text-xs font-bold text-[#ffb4ab] hover:text-white">
+              {ui.clearFilters}
             </button>
-          </div>
+          )}
         </div>
-
-        {/* Filters Grid (Visible on Desktop, toggleable on mobile) */}
-        <div className={`grid grid-cols-2 sm:grid-cols-5 gap-3 ${isMobileFiltersOpen ? 'grid' : 'hidden sm:grid'}`}>
-          {/* 1. Body Part */}
-          <div>
-            <label className="text-[10px] text-[#86948a] font-bold uppercase tracking-wider block mb-1">
-              {ui.bodyPart}
-            </label>
-            <select
-              value={bodyPartFilter}
-              onChange={e => setBodyPartFilter(e.target.value as BodyPartFilter)}
-              className="w-full bg-[#152031] border border-[#3c4a42] rounded-xl px-2.5 py-2 text-xs text-[#d8e3fb] font-semibold focus:outline-none focus:border-[#4edea3]"
-            >
-              <option value="All">All Body Parts</option>
-              <option value="Full Body">Full Body</option>
-              <option value="Upper Body">Upper Body</option>
-              <option value="Lower Body">Lower Body</option>
-              <option value="Core">Core</option>
-              <option value="Chest">Chest</option>
-              <option value="Back">Back</option>
-              <option value="Shoulders">Shoulders</option>
-              <option value="Arms">Arms</option>
-              <option value="Legs">Legs</option>
-              <option value="Glutes">Glutes</option>
-              <option value="Hips">Hips</option>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#86948a]">{ui.targetMuscles}</span>
+            <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className={selectCls}>
+              <option value="all">All</option>
+              {options.muscles
+                .filter((m) => groupId === 'all' || BODY_GROUPS.find((g) => g.id === groupId)?.muscles.includes(m))
+                .map((m) => (
+                  <option key={m} value={m}>
+                    {titleCase(m)}
+                  </option>
+                ))}
             </select>
-          </div>
-
-          {/* 2. Goal */}
-          <div>
-            <label className="text-[10px] text-[#86948a] font-bold uppercase tracking-wider block mb-1">
-              {ui.goal}
-            </label>
-            <select
-              value={goalFilter}
-              onChange={e => setGoalFilter(e.target.value as GoalFilter)}
-              className="w-full bg-[#152031] border border-[#3c4a42] rounded-xl px-2.5 py-2 text-xs text-[#d8e3fb] font-semibold focus:outline-none focus:border-[#4edea3]"
-            >
-              <option value="All">All Goals</option>
-              <option value="Strength">Strength</option>
-              <option value="Muscle Growth">Muscle Growth</option>
-              <option value="Fat Loss">Fat Loss</option>
-              <option value="Endurance">Endurance</option>
-              <option value="Mobility">Mobility</option>
-              <option value="Flexibility">Flexibility</option>
-              <option value="Balance">Balance</option>
-              <option value="General Fitness">General Fitness</option>
-              <option value="Recovery">Recovery</option>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#86948a]">{ui.equipment}</span>
+            <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className={selectCls}>
+              <option value="all">All</option>
+              {options.equipment.map((e) => (
+                <option key={e} value={e}>
+                  {equipmentLabel(e)}
+                </option>
+              ))}
             </select>
-          </div>
-
-          {/* 3. Difficulty */}
-          <div>
-            <label className="text-[10px] text-[#86948a] font-bold uppercase tracking-wider block mb-1">
-              {ui.difficulty}
-            </label>
-            <select
-              value={difficultyFilter}
-              onChange={e => setDifficultyFilter(e.target.value as DifficultyFilter)}
-              className="w-full bg-[#152031] border border-[#3c4a42] rounded-xl px-2.5 py-2 text-xs text-[#d8e3fb] font-semibold focus:outline-none focus:border-[#4edea3]"
-            >
-              <option value="All">All Difficulties</option>
-              <option value="Beginner">Beginner</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#86948a]">{ui.difficulty}</span>
+            <select value={level} onChange={(e) => setLevel(e.target.value)} className={selectCls}>
+              <option value="all">All</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="expert">Advanced</option>
             </select>
-          </div>
-
-          {/* 4. Equipment */}
-          <div>
-            <label className="text-[10px] text-[#86948a] font-bold uppercase tracking-wider block mb-1">
-              {ui.equipment}
-            </label>
-            <select
-              value={equipmentFilter}
-              onChange={e => setEquipmentFilter(e.target.value as EquipmentFilter)}
-              className="w-full bg-[#152031] border border-[#3c4a42] rounded-xl px-2.5 py-2 text-xs text-[#d8e3fb] font-semibold focus:outline-none focus:border-[#4edea3]"
-            >
-              <option value="All">All Equipment</option>
-              <option value="No Equipment">No Equipment (Bodyweight)</option>
-              <option value="Dumbbell">Dumbbell</option>
-              <option value="Barbell">Barbell</option>
-              <option value="Kettlebell">Kettlebell</option>
-              <option value="Resistance Band">Resistance Band</option>
-              <option value="Cable">Cable Machine</option>
-              <option value="Machine">Gym Machine</option>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#86948a]">{ui.movementType}</span>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
+              <option value="all">All</option>
+              {options.categories.map((c) => (
+                <option key={c} value={c}>
+                  {categoryLabel(c)}
+                </option>
+              ))}
             </select>
-          </div>
-
-          {/* 5. Movement Type */}
-          <div>
-            <label className="text-[10px] text-[#86948a] font-bold uppercase tracking-wider block mb-1">
-              {ui.movementType}
-            </label>
-            <select
-              value={movementTypeFilter}
-              onChange={e => setMovementTypeFilter(e.target.value as MovementTypeFilter)}
-              className="w-full bg-[#152031] border border-[#3c4a42] rounded-xl px-2.5 py-2 text-xs text-[#d8e3fb] font-semibold focus:outline-none focus:border-[#4edea3]"
-            >
-              <option value="All">All Types</option>
-              <option value="Strength">Strength</option>
-              <option value="Cardio">Cardio</option>
-              <option value="Mobility">Mobility</option>
-              <option value="Stretch">Stretch</option>
-              <option value="Warm-up">Warm-up</option>
-              <option value="Cool-down">Cool-down</option>
-              <option value="Balance">Balance</option>
-              <option value="Functional">Functional</option>
+          </label>
+          <label className="col-span-2 flex flex-col gap-1.5 md:col-span-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#86948a]">Sort</span>
+            <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className={selectCls}>
+              <option value="popular">Popular first</option>
+              <option value="name">A–Z</option>
+              <option value="level-asc">Easiest first</option>
+              <option value="level-desc">Hardest first</option>
             </select>
-          </div>
+          </label>
         </div>
       </div>
 
-      {/* EXERCISES GRID SECTION */}
-      <div>
-        {filteredExercises.length === 0 ? (
-          <div className="bg-[#111c2d] p-12 rounded-3xl border border-[#1f2a3c] text-center flex flex-col items-center justify-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-[#152031] text-[#86948a] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[36px]">search_off</span>
-            </div>
-            <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">
-              No Exercises Found
-            </h3>
-            <p className="text-xs sm:text-sm text-[#86948a] max-w-md">
-              {ui.noExercisesFound}
-            </p>
-            <button
-              onClick={clearAllFilters}
-              className="px-5 py-2.5 rounded-xl bg-[#4edea3] text-[#003824] text-xs font-bold hover:bg-[#6ffbbe] transition-colors"
-            >
-              {ui.clearFilters}
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredExercises.map(exercise => {
-              const loc = getLocalizedExercise(exercise);
-              const isSaved = isFavoriteExercise(exercise.id);
-
+      {/* GRID */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-[#1f2a3c] bg-[#111c2d] p-10 text-center">
+          <span className="material-symbols-outlined text-[40px] text-[#86948a]">search_off</span>
+          <p className="text-sm text-[#bbcabf]">{ui.noExercisesFound}</p>
+          <button onClick={clearAllFilters} className="rounded-xl bg-[#4edea3] px-5 py-2.5 text-xs font-bold text-[#003824] transition-colors hover:bg-[#6ffbbe]">
+            {ui.clearFilters}
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {shown.map((ex) => {
+              const isSaved = isFavoriteExercise(ex.id);
               return (
                 <div
-                  key={exercise.id}
-                  className="bg-[#111c2d] hover:bg-[#142234] rounded-3xl p-5 border border-[#1f2a3c] hover:border-[#4edea3]/40 shadow-xl transition-all duration-200 flex flex-col justify-between gap-4 group relative"
+                  key={ex.id}
+                  onClick={() => setSelectedExerciseId(ex.id)}
+                  className="group relative flex cursor-pointer flex-col gap-3 rounded-3xl border border-[#1f2a3c] bg-[#111c2d] p-3.5 shadow-xl transition-all duration-200 hover:border-[#4edea3]/40 hover:bg-[#142234]"
                 >
-                  {/* Top Bar with Badges & Favorite Toggle */}
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#10b981]/20 text-[#4edea3] border border-[#4edea3]/30">
-                          {exercise.category}
-                        </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[#152031] text-[#bbcabf] border border-[#1f2a3c]">
-                          {exercise.difficulty}
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          toggleFavoriteExercise(exercise.id);
-                        }}
-                        className={`p-1.5 rounded-xl transition-all ${
-                          isSaved
-                            ? 'text-[#ff6b4a] bg-[#ff6b4a]/15'
-                            : 'text-[#86948a] hover:text-[#ffb4ab] hover:bg-[#152031]'
-                        }`}
-                        title={isSaved ? 'Remove from favorites' : 'Save to favorites'}
-                      >
-                        <span className="material-symbols-outlined text-[20px]">
-                          {isSaved ? 'favorite' : 'favorite_border'}
-                        </span>
-                      </button>
-                    </div>
-
-                    {/* Exercise Title & Description */}
-                    <h3
-                      onClick={() => setSelectedExerciseId(exercise.id)}
-                      className="font-headline text-lg sm:text-xl font-bold text-[#d8e3fb] group-hover:text-[#4edea3] transition-colors cursor-pointer"
-                    >
-                      {loc.name}
-                    </h3>
-
-                    <p className="text-xs text-[#86948a] line-clamp-2 mt-1.5 leading-relaxed">
-                      {loc.shortDescription}
-                    </p>
+                  <CardPhoto ex={ex} />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavoriteExercise(ex.id);
+                    }}
+                    className={`absolute right-6 top-6 rounded-xl p-1.5 backdrop-blur transition-all ${isSaved ? 'bg-[#ff6b4a]/25 text-[#ff6b4a]' : 'bg-black/45 text-white hover:text-[#ffb4ab]'}`}
+                    title={isSaved ? 'Remove from favorites' : 'Save to favorites'}
+                    aria-label={isSaved ? 'Remove from favorites' : 'Save to favorites'}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">{isSaved ? 'favorite' : 'favorite_border'}</span>
+                  </button>
+                  <div className="flex flex-wrap items-center gap-1.5 px-1">
+                    <span className="rounded-full border border-[#4edea3]/30 bg-[#10b981]/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#4edea3]">{categoryLabel(ex.category)}</span>
+                    <span className="rounded-lg border border-[#1f2a3c] bg-[#152031] px-2 py-0.5 text-[10px] font-bold text-[#bbcabf]">{LEVEL_LABEL[ex.level]}</span>
                   </div>
-
-                  {/* Muscle & Equipment Metadata Tags */}
-                  <div className="space-y-2 pt-2 border-t border-[#1f2a3c]/60">
+                  <h3 className="px-1 font-headline text-base font-bold text-[#d8e3fb] transition-colors group-hover:text-[#4edea3] sm:text-lg">{ex.name}</h3>
+                  <div className="space-y-1.5 border-t border-[#1f2a3c]/60 px-1 pt-2.5">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-[#86948a] font-semibold">{ui.primary}:</span>
-                      <span className="text-[#4edea3] font-bold truncate max-w-[65%] text-right">
-                        {exercise.primaryMuscles.join(', ')}
-                      </span>
+                      <span className="font-semibold text-[#86948a]">{ui.primary}:</span>
+                      <span className="max-w-[65%] truncate text-right font-bold text-[#4edea3]">{ex.primaryMuscles.map(titleCase).join(', ')}</span>
                     </div>
-
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-[#86948a] font-semibold">{ui.secondary}:</span>
-                      <span className="text-[#bbcabf] truncate max-w-[65%] text-right">
-                        {exercise.secondaryMuscles.join(', ')}
-                      </span>
+                      <span className="font-semibold text-[#86948a]">{ui.equipment}:</span>
+                      <span className="font-semibold text-[#d8e3fb]">{equipmentLabel(ex.equipment)}</span>
                     </div>
-
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-[#86948a] font-semibold">{ui.equipment}:</span>
-                      <span className="text-[#d8e3fb] font-semibold">{exercise.equipment}</span>
-                    </div>
-                  </div>
-
-                  {/* Action CTA Button */}
-                  <div className="pt-2">
-                    <button
-                      onClick={() => setSelectedExerciseId(exercise.id)}
-                      className="w-full bg-[#152031] group-hover:bg-[#4edea3] text-[#4edea3] group-hover:text-[#003824] font-extrabold text-xs py-3 px-4 rounded-xl border border-[#4edea3]/30 group-hover:border-[#4edea3] transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                    >
-                      <span>{ui.viewExercise}</span>
-                      <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">
-                        arrow_forward
-                      </span>
-                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+          {visible < filtered.length && (
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={() => setVisible((v) => v + PAGE_SIZE)}
+                className="flex items-center gap-2 rounded-2xl border border-[#4edea3]/40 bg-[#152031] px-6 py-3 text-sm font-extrabold text-[#4edea3] transition-all hover:bg-[#4edea3] hover:text-[#003824]"
+              >
+                <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                Load more exercises
+              </button>
+              <span className="text-[11px] text-[#86948a]">
+                Showing {shown.length} of {filtered.length}
+              </span>
+            </div>
+          )}
+        </>
+      )}
 
-      {/* Safety & Medical Disclaimer Footer Banner */}
-      <div className="bg-[#111c2d] p-5 rounded-2xl border border-[#1f2a3c] flex items-center gap-3">
-        <span className="material-symbols-outlined text-[#4edea3] text-[24px] shrink-0">
-          info
-        </span>
-        <p className="text-xs text-[#86948a] leading-relaxed">
-          {ui.disclaimerText}
+      <div className="flex flex-col gap-2 rounded-2xl border border-[#1f2a3c] bg-[#111c2d] p-5 sm:flex-row sm:items-center sm:gap-3">
+        <span className="material-symbols-outlined shrink-0 text-[24px] text-[#4edea3]">info</span>
+        <p className="text-xs leading-relaxed text-[#86948a]">
+          {ui.disclaimerText}{' '}
+          <a href={PHOTO_CREDIT.url} target="_blank" rel="noopener noreferrer" className="text-[#5d6b7e] underline hover:text-[#86948a]">
+            {PHOTO_CREDIT.label}
+          </a>
         </p>
       </div>
     </div>
