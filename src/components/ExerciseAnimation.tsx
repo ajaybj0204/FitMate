@@ -29,7 +29,7 @@ export interface ExerciseAnimationProps {
 
 /**
  * ExerciseAnimation
- * Shows a real trainer performing the exercise (start ↔ end position photo loop),
+ * Shows real photos of the exercise (start ↔ end position photo loop),
  * with target muscles and plain-language how-to steps.
  */
 export const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({

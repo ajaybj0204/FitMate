@@ -141,7 +141,7 @@ export const LandingSection: React.FC = () => {
               Smart Health Calculations
             </h3>
             <p className="text-sm text-[#bbcabf] leading-relaxed">
-              Instant BMI, BMR, body fat percentage, and macro targets computed with clinical precision.
+              Instant BMI, BMR, body fat percentage, and macro targets calculated with standard, widely used formulas.
             </p>
           </div>
 
@@ -205,7 +205,7 @@ export const LandingSection: React.FC = () => {
               Beginner-Friendly Learning
             </h3>
             <p className="text-sm text-[#bbcabf] leading-relaxed">
-              Expert guides breaking down complex physiological concepts into simple, intuitive steps.
+              Simple guides breaking down complex physiological concepts into simple, intuitive steps.
             </p>
           </div>
         </div>

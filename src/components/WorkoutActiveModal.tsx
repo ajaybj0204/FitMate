@@ -209,7 +209,7 @@ export const WorkoutActiveModal: React.FC = () => {
               </div>
             )}
 
-            {/* 3D BIOMECHANICAL ANATOMICAL EXERCISE ANIMATION */}
+            {/* Exercise demo (real photo loop) */}
             <ExerciseAnimation
               exerciseName={currentExercise.name}
               exerciseDbId={currentExercise.exerciseDbId}

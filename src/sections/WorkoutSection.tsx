@@ -246,7 +246,7 @@ export const WorkoutSection: React.FC = () => {
         )}
       </div>
 
-      {/* Exercise Detail Modal with 3D Anatomical Animation */}
+      {/* Exercise detail modal with photo demo */}
       {inspectingExercise && (
         <div className="fixed inset-0 bg-[#081425]/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
           <div className="bg-[#111927] rounded-3xl w-full max-w-2xl p-5 sm:p-7 shadow-2xl relative border border-[#1f2a3c] my-auto flex flex-col gap-4">
@@ -269,7 +269,7 @@ export const WorkoutSection: React.FC = () => {
               {inspectingExercise.name}
             </h3>
 
-            {/* 3D Exercise Demonstration */}
+            {/* Exercise demonstration */}
             <ExerciseAnimation
               exerciseName={inspectingExercise.name}
               exerciseDbId={inspectingExercise.exerciseDbId}

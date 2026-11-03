@@ -21,7 +21,7 @@ const MOVE_MS = 750;
 
 /**
  * Real-photo exercise demo: crossfades between the start and end position photos
- * in a smooth loop, like a short demo clip of a real trainer.
+ * in a smooth loop, like a short demo clip.
  */
 export const ExerciseDemo: React.FC<ExerciseDemoProps> = ({ photos, name, compact = false, autoPlay = true, onRep, className = '' }) => {
   const [frame, setFrame] = useState(0); // 0 = start position, 1 = end position

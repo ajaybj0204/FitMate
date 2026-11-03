@@ -44,7 +44,7 @@ export interface LibraryUITranslation {
 export const LIBRARY_UI_TRANSLATIONS: Record<SupportedLanguage, LibraryUITranslation> = {
   en: {
     title: 'FITORA Exercise Library',
-    subtitle: 'Explore our evidence-based exercise encyclopedia with 3D biomechanics, form tips, and physiological breakdowns.',
+    subtitle: 'Browse 873 exercises with real demo photos, step-by-step instructions and form tips.',
     searchPlaceholder: 'Search exercises, muscles, equipment, goals (e.g. Chest, Squat, Mobility)...',
     allCategories: 'All Categories',
     filterBy: 'Filter Database',
@@ -78,14 +78,14 @@ export const LIBRARY_UI_TRANSLATIONS: Record<SupportedLanguage, LibraryUITransla
     clearFilters: 'Clear Filters',
     noExercisesFound: 'No exercises match your search and filter criteria. Try adjusting your search term or clearing filters.',
     exerciseCountPrefix: 'Showing',
-    exerciseCountSuffix: 'evidence-based exercises',
+    exerciseCountSuffix: 'exercises',
     equipmentAlternatives: 'Equipment Alternatives',
     movementPatternLabel: 'Movement Pattern',
   },
 
   kn: {
     title: 'ಫಿಟೋರಾ (FITORA) ವ್ಯಾಯಾಮ ಲೈಬ್ರರಿ',
-    subtitle: '3D ಬಯೋಮೆಕ್ಯಾನಿಕ್ಸ್, ನಿಖರ ತಂತ್ರಗಳು ಮತ್ತು ವೈಜ್ಞಾನಿಕ ವಿವರಣೆಗಳೊಂದಿಗೆ ಸಮಗ್ರ ವ್ಯಾಯಾಮ ವಿಶ್ವಕೋಶ.',
+    subtitle: 'ನಿಜವಾದ ಡೆಮೊ ಫೋಟೋಗಳು, ಹಂತ ಹಂತದ ಸೂಚನೆಗಳು ಮತ್ತು ಭಂಗಿ ಸಲಹೆಗಳೊಂದಿಗೆ ವ್ಯಾಯಾಮ ಸಂಗ್ರಹ.',
     searchPlaceholder: 'ವ್ಯಾಯಾಮಗಳು, ಸ್ನಾಯುಗಳು, ಸಲಕರಣೆಗಳು ಹುಡುಕಿ (ಉದಾ: Chest, Squat, Mobility)...',
     allCategories: 'ಎಲ್ಲಾ ವಿಭಾಗಗಳು',
     filterBy: 'ಫಿಲ್ಟರ್ ಮಾಡಿ',
@@ -126,7 +126,7 @@ export const LIBRARY_UI_TRANSLATIONS: Record<SupportedLanguage, LibraryUITransla
 
   te: {
     title: 'ఫిటోరా (FITORA) వ్యాయామ లైబ్రరీ',
-    subtitle: '3D బయోమెకానిక్స్, సరైన భంగిమ పద్ధతులు మరియు శాస్త్రీయ వివరణలతో సమగ్ర వ్యాయామ డేటాబేస్.',
+    subtitle: 'నిజమైన డెమో ఫోటోలు, దశలవారీ సూచనలు మరియు భంగిమ చిట్కాలతో వ్యాయామ సేకరణ.',
     searchPlaceholder: 'వ్యాయామాలు, కండరాలు, పరికరాలను శోధించండి (ఉదా: Chest, Squat, Mobility)...',
     allCategories: 'అన్ని విభాగాలు',
     filterBy: 'ఫిల్టర్ చేయండి',
@@ -167,7 +167,7 @@ export const LIBRARY_UI_TRANSLATIONS: Record<SupportedLanguage, LibraryUITransla
 
   ta: {
     title: 'FITORA உடற்பயிற்சி நூலகம் (Exercise Library)',
-    subtitle: '3D உடற்கூறியல் அனிமேஷன்கள், சரியான நுட்பங்கள் மற்றும் அறிவியல் விளக்கங்களுடன் கூடிய முழுமையான உடற்பயிற்சி தளம்.',
+    subtitle: 'உண்மையான டெமோ புகைப்படங்கள், படிப்படியான வழிமுறைகள் மற்றும் சரியான நுட்பக் குறிப்புகளுடன் உடற்பயிற்சி தொகுப்பு.',
     searchPlaceholder: 'பயிற்சிகள், தசைகள், உபகரணங்களைத் தேடுங்கள் (எ.கா: Chest, Squat, Mobility)...',
     allCategories: 'அனைத்து பிரிவுகள்',
     filterBy: 'வடிகட்டுக',
@@ -208,7 +208,7 @@ export const LIBRARY_UI_TRANSLATIONS: Record<SupportedLanguage, LibraryUITransla
 
   ml: {
     title: 'ഫിറ്റോറ (FITORA) വ്യായാമ ലൈബ്രറി',
-    subtitle: '3D ശരീരഘടന അനിമേഷനുകളും ശാസ്ത്രീയ വിശകലനങ്ങളും ഉൾക്കൊള്ളുന്ന സമഗ്രമായ വ്യായാമ ശേഖരം.',
+    subtitle: 'യഥാർത്ഥ ഡെമോ ഫോട്ടോകളും ഘട്ടം ഘട്ടമായുള്ള നിർദ്ദേശങ്ങളും ഉൾക്കൊള്ളുന്ന വ്യായാമ ശേഖരം.',
     searchPlaceholder: 'വ്യായാമങ്ങൾ, പേശികൾ, ഉപകരണങ്ങൾ തിരയുക (ഉദാ: Chest, Squat, Mobility)...',
     allCategories: 'എല്ലാ വിഭാഗങ്ങളും',
     filterBy: 'ഫിൽട്ടർ ചെയ്യുക',

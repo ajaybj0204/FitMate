@@ -347,14 +347,14 @@ export const ExerciseLibrarySection: React.FC<ExerciseLibrarySectionProps> = ({ 
         <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#4edea3]/10 blur-3xl" />
         <div className="relative z-10 max-w-2xl">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[#4edea3]/30 bg-[#10b981]/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#4edea3]">Real trainer demos</span>
+            <span className="rounded-full border border-[#4edea3]/30 bg-[#10b981]/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#4edea3]">Real demo photos</span>
             <span className="text-xs text-[#86948a]">
               {ui.exerciseCountPrefix} <strong className="text-[#4edea3]">{filtered.length}</strong> {ui.exerciseCountSuffix}
             </span>
           </div>
           <h1 className="font-headline text-3xl font-extrabold tracking-tight text-[#d8e3fb] sm:text-4xl">{ui.title}</h1>
           <p className="mt-1.5 text-xs leading-relaxed text-[#bbcabf] sm:text-sm">
-            {db.length} exercises, each shown by a real trainer from start to finish position. Open any exercise to watch the demo.
+            {db.length} exercises, each shown with real photos from start to finish position. Open any exercise to watch the demo.
           </p>
         </div>
         <div className="relative z-10">
