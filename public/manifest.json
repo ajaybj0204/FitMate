@@ -27,5 +27,71 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "lang": "en-IN",
+  "dir": "ltr",
+  "orientation": "portrait",
+  "categories": [
+    "health",
+    "fitness",
+    "lifestyle"
+  ],
+  "shortcuts": [
+    {
+      "name": "Start workout",
+      "short_name": "Workout",
+      "url": "/#workout",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Log food",
+      "short_name": "Food",
+      "url": "/#nutrition",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My gym",
+      "short_name": "Gym",
+      "url": "/#gym",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/library.png",
+      "sizes": "1286x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "873-exercise library with real demo photos"
+    },
+    {
+      "src": "/screenshots/exercise-demo.png",
+      "sizes": "1286x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Exercise demo with rep counter"
+    },
+    {
+      "src": "/screenshots/weekly-plan.png",
+      "sizes": "1286x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Weekly plan with smart targets"
+    }
   ]
 }
