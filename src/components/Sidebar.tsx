@@ -15,6 +15,7 @@ export const Sidebar: React.FC = () => {
     { id: 'nutrition', label: t('nutrition', 'Nutrition'), icon: 'nutrition' },
     { id: 'analytics', label: t('analytics', 'Analytics'), icon: 'insights' },
     { id: 'progress', label: t('progress', 'Progress'), icon: 'trending_up' },
+    { id: 'gym', label: t('gym', 'My Gym'), icon: 'storefront' },
     { id: 'learn', label: t('learn', 'Learn'), icon: 'school' },
     { id: 'profile', label: t('profile', 'Profile'), icon: 'person' },
   ];

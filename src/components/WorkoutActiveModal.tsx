@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { ExerciseAnimation } from './ExerciseAnimation';
 import { ExerciseSubstitutionModal } from './ExerciseSubstitutionModal';
+import { describeSets } from '../lib/progression';
 
 export const WorkoutActiveModal: React.FC = () => {
   const {
@@ -28,6 +29,8 @@ export const WorkoutActiveModal: React.FC = () => {
     closeCompleteModal,
     userProfile,
     navigateTo,
+    currentSuggestion,
+    isQuickWorkout,
   } = useFitMate();
 
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
@@ -38,9 +41,9 @@ export const WorkoutActiveModal: React.FC = () => {
     if (!workoutSummary) return '';
     const messages = [
       `Congratulations! You burned approximately ${workoutSummary.caloriesBurned} calories today. You're getting closer to your ${userProfile.goal} goal. Keep going!`,
-      `Outstanding discipline! With ${workoutSummary.totalVolumeKg.toLocaleString()}kg total volume moved, your progressive overload is building lean tissue. Recovery is your superpower!`,
-      `Phenomenal workout! That's another high-intensity session in the books. Your ${userProfile.streakDays}-day consistency streak puts you in the top 5% of athletes!`,
-      `Incredible biomechanical execution! You pushed through ${workoutSummary.setsCount} sets with strict form. Hydrate and refuel with your post-workout meal!`,
+      `Outstanding discipline! With ${workoutSummary.totalVolumeKg.toLocaleString()} kg total moved today. Next time FITORA will tell you exactly what to lift. Recovery is your superpower!`,
+      `Phenomenal workout! That's another high-intensity session in the books. You're on a ${userProfile.streakDays}-day streak. Showing up is what makes the difference!`,
+      `Great session! You pushed through ${workoutSummary.setsCount} sets with strict form. Hydrate and refuel with your post-workout meal!`,
       `Great job! Approximately ${workoutSummary.caloriesBurned} kcal burned today with high metabolic demand. Consistency is where real transformation happens!`,
     ];
     // Use completed workouts count as seed for deterministic yet varying message
@@ -106,16 +109,19 @@ export const WorkoutActiveModal: React.FC = () => {
                   <span className="text-xs text-[#86948a] font-medium">
                     FITORA • {activeWorkoutDay.splitName} Day • {activeWorkoutDay.focus}
                   </span>
+                  {isQuickWorkout && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-[#9ddf2e]/15 text-[#9ddf2e] px-2 py-0.5 rounded-full">30-min quick</span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsSubModalOpen(true)}
                     className="px-2.5 py-1 text-xs text-[#4edea3] hover:text-white bg-[#0a121e] hover:bg-[#1f2a3c] rounded-xl border border-[#1f2a3c] transition-colors flex items-center gap-1.5"
-                    title="Substitute Exercise"
+                    title="Equipment busy? Swap this exercise"
                   >
                     <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
-                    <span className="hidden sm:inline">Swap Exercise</span>
+                    <span className="hidden sm:inline">Equipment busy?</span>
                   </button>
                   <button
                     onClick={closeWorkoutMode}
@@ -228,6 +234,38 @@ export const WorkoutActiveModal: React.FC = () => {
               repsTarget={currentExercise.reps}
               mode="workout"
             />
+
+            {/* SMART LOGGER: last time + today's target */}
+            {currentSuggestion && (
+              <div className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center gap-3 ${
+                currentSuggestion.kind === 'increase'
+                  ? 'bg-[#10b981]/10 border-[#4edea3]/50'
+                  : currentSuggestion.kind === 'deload'
+                  ? 'bg-[#ffb4ab]/10 border-[#ffb4ab]/40'
+                  : 'bg-[#0c1421] border-[#1f2a3c]'
+              }`}>
+                <div className="flex items-center gap-3 sm:w-56 shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#152336] text-[#4edea3] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[22px]">
+                      {currentSuggestion.kind === 'increase' ? 'trending_up' : currentSuggestion.kind === 'deload' ? 'south' : currentSuggestion.kind === 'first' ? 'flag' : 'history'}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#86948a]">Last time</div>
+                    <div className="text-sm font-bold text-[#d8e3fb] truncate">
+                      {currentSuggestion.last ? describeSets(currentSuggestion.last.sets) : 'Not logged yet'}
+                    </div>
+                    {currentSuggestion.lastDate && <div className="text-[10px] text-[#86948a]">{currentSuggestion.lastDate}</div>}
+                  </div>
+                </div>
+                <div className="flex-1 sm:border-l sm:border-[#1f2a3c] sm:pl-4">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#4edea3]">
+                    Today's target: {currentSuggestion.weightKg > 0 ? `${currentSuggestion.weightKg} kg × ` : ''}{currentSuggestion.reps} reps
+                  </div>
+                  <p className="text-xs text-[#bbcabf] mt-0.5 leading-relaxed">{currentSuggestion.note}</p>
+                </div>
+              </div>
+            )}
 
             {/* SET-BY-SET PROGRESSIVE OVERLOAD LOGGER GRID */}
             <div className="bg-[#0c1421] p-4 rounded-2xl border border-[#1f2a3c]">
@@ -481,7 +519,7 @@ export const WorkoutActiveModal: React.FC = () => {
 
             {/* Calorie Tracking Clarity Label */}
             <div className="text-[10px] text-[#86948a] italic">
-              *Calorie values are physiological estimates calibrated to your bodyweight ({userProfile.weightKg}kg) and workout duration.
+              *Calories are a rough estimate from your bodyweight ({userProfile.weightKg} kg) and workout time.
             </div>
 
             {/* Navigation CTAs */}

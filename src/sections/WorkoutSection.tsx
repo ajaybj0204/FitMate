@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { describeSets, localDate, todayDayId } from '../lib/progression';
 import { useFitMate } from '../context/FitMateContext';
 import { Exercise } from '../types';
 import { ExerciseSubstitutionModal } from '../components/ExerciseSubstitutionModal';
@@ -13,6 +14,10 @@ export const WorkoutSection: React.FC = () => {
     startWorkout,
     userProfile,
     navigateTo,
+    missedDays,
+    skipMissedDay,
+    suggestionFor,
+    sessions,
   } = useFitMate();
 
   const [inspectingExercise, setInspectingExercise] = useState<Exercise | null>(null);
@@ -20,6 +25,16 @@ export const WorkoutSection: React.FC = () => {
 
   const activeDay =
     workoutSchedule.find(d => d.id === selectedScheduleDayId) || workoutSchedule[0];
+
+  const todayId = todayDayId();
+  // Days of the current week (Mon–Sun) that already have a logged workout
+  const doneThisWeek = useMemo(() => {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const start = localDate(monday);
+    return new Set(sessions.filter(s => s.date >= start).map(s => s.dayId));
+  }, [sessions]);
 
   return (
     <div className="flex flex-col w-full gap-8 pb-12">
@@ -38,7 +53,7 @@ export const WorkoutSection: React.FC = () => {
             Hypertrophy &amp; Strength Builder
           </h1>
           <p className="text-xs sm:text-sm text-[#bbcabf] max-w-xl leading-relaxed">
-            FITORA biomechanical workout regimen designed to maximize muscle mass and functional power through systematic progressive overload.
+            Your weekly plan. Log every set and FITORA remembers your numbers and tells you what to lift next time.
           </p>
         </div>
 
@@ -60,6 +75,52 @@ export const WorkoutSection: React.FC = () => {
         </div>
       </div>
 
+      {/* Missed a training day? Do it today or skip it */}
+      {missedDays.length > 0 && (
+        <div className="bg-[#2a1f12] border border-[#ffb95f]/40 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-[#ffb95f] text-[24px] shrink-0">event_busy</span>
+            <div>
+              <h3 className="font-headline text-base font-bold text-[#ffddb8]">
+                You missed {missedDays.length === 1 ? 'a workout' : `${missedDays.length} workouts`} this week
+              </h3>
+              <p className="text-xs text-[#d8c3ad] mt-0.5">
+                Life happens. Do it today instead, or skip it so your week moves on. No guilt either way.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            {missedDays.slice(0, 3).map(({ day, date }) => (
+              <div key={`${date}-${day.id}`} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#1b150d] rounded-xl px-3.5 py-2.5 border border-[#ffb95f]/20">
+                <div className="text-sm text-[#ffddb8]">
+                  <strong>{day.dayName}:</strong> {day.splitName} <span className="text-[#d8c3ad] text-xs">({day.focus})</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => startWorkout(day.id)}
+                    className="px-3 py-1.5 rounded-lg bg-[#ffb95f] text-[#2a1700] text-xs font-bold hover:brightness-110"
+                  >
+                    Do it today
+                  </button>
+                  <button
+                    onClick={() => startWorkout(day.id, { quick: true })}
+                    className="px-3 py-1.5 rounded-lg bg-[#1f2a3c] text-[#ffddb8] text-xs font-semibold hover:bg-[#2b3a52]"
+                  >
+                    Quick 30 min
+                  </button>
+                  <button
+                    onClick={() => skipMissedDay(date, day.id)}
+                    className="px-3 py-1.5 rounded-lg text-[#d8c3ad] text-xs font-semibold hover:text-white"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Weekly Schedule Day Cards */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -80,8 +141,14 @@ export const WorkoutSection: React.FC = () => {
                     : 'bg-[#152031] text-[#d8e3fb] hover:bg-[#1f2a3c] border-[#1f2a3c]'
                 }`}
               >
-                <span className={`text-[10px] uppercase tracking-wider ${isSelected ? 'opacity-90' : 'text-[#86948a]'}`}>
-                  {day.dayName}
+                <span className={`text-[10px] uppercase tracking-wider flex items-center justify-between gap-1 ${isSelected ? 'opacity-90' : 'text-[#86948a]'}`}>
+                  <span>
+                    {day.dayName}
+                    {day.id === todayId && <span className={`ml-1 font-extrabold ${isSelected ? '' : 'text-[#4edea3]'}`}>· Today</span>}
+                  </span>
+                  {doneThisWeek.has(day.id) && (
+                    <span className="material-symbols-outlined text-[16px]" title="Done this week">check_circle</span>
+                  )}
                 </span>
                 <span className="font-headline text-base font-bold mt-1">
                   {day.splitName}
@@ -117,6 +184,16 @@ export const WorkoutSection: React.FC = () => {
               <span>Browse Library</span>
             </button>
 
+            {!activeDay.isRest && activeDay.exercises.length > 3 && (
+              <button
+                onClick={() => startWorkout(activeDay.id, { quick: true })}
+                className="bg-[#111c2d] hover:bg-[#1f2a3c] text-[#9ddf2e] border border-[#9ddf2e]/30 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all shrink-0"
+                title="Short on time: the 3 main exercises, one set fewer each"
+              >
+                <span className="material-symbols-outlined text-[18px]">bolt</span>
+                <span>Quick 30 min</span>
+              </button>
+            )}
             {!activeDay.isRest && activeDay.exercises.length > 0 && (
               <button
                 onClick={() => startWorkout(activeDay.id)}
@@ -216,6 +293,25 @@ export const WorkoutSection: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Smart logger: last time → next target */}
+                  {(() => {
+                    const s = suggestionFor(exercise);
+                    if (!s.last) {
+                      return <div className="text-[11px] text-[#86948a] -mt-1">Not logged yet. Your first session sets the baseline.</div>;
+                    }
+                    return (
+                      <div className="-mt-1 text-[11px] leading-relaxed">
+                        <span className="text-[#86948a]">Last: </span>
+                        <span className="text-[#bbcabf] font-semibold">{describeSets(s.last.sets)}</span>
+                        <span className="text-[#86948a]"> → Next: </span>
+                        <span className={`font-bold ${s.kind === 'increase' ? 'text-[#4edea3]' : s.kind === 'deload' ? 'text-[#ffb4ab]' : 'text-[#d8e3fb]'}`}>
+                          {s.weightKg > 0 ? `${s.weightKg} kg × ${s.reps}` : `${s.reps} reps`}
+                          {s.kind === 'increase' ? ' ↑' : ''}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
                   {/* Buttons */}
                   <div className="flex items-center gap-2">
                     <button
@@ -227,7 +323,7 @@ export const WorkoutSection: React.FC = () => {
                     <button
                       onClick={() => setSubstitutingExercise({ exercise, index: idx })}
                       className="bg-[#111c2d] hover:bg-[#1f2a3c] text-[#bbcabf] hover:text-[#4edea3] p-2.5 rounded-xl text-xs transition-all border border-[#1f2a3c]"
-                      title="Substitute Exercise"
+                      title="Swap this exercise in your plan"
                     >
                       <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
                     </button>
@@ -316,6 +412,7 @@ export const WorkoutSection: React.FC = () => {
           exercise={substitutingExercise.exercise}
           dayId={activeDay.id}
           exerciseIndex={substitutingExercise.index}
+          mode="plan"
           isOpen={true}
           onClose={() => setSubstitutingExercise(null)}
         />

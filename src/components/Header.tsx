@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { SUPPORTED_LANGUAGES } from '../i18n/translations';
 import { PWAInstallButton } from './PWAInstallButton';
+import { AccountButton } from './AccountButton';
 
 export const Header: React.FC<{ onMobileMenuClick?: () => void }> = ({ onMobileMenuClick }) => {
   const {
@@ -271,6 +272,8 @@ export const Header: React.FC<{ onMobileMenuClick?: () => void }> = ({ onMobileM
             </>
           )}
         </div>
+
+        <AccountButton />
 
         {/* User Profile Badge */}
         <div

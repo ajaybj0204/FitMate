@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 import { FitMateProvider, useFitMate } from './context/FitMateContext';
+import { AuthProvider } from './context/AuthContext';
+import { GymSection } from './sections/gym/GymSection';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { MobileNav } from './components/MobileNav';
@@ -70,6 +72,7 @@ const MainAppContent: React.FC = () => {
             <LearnSection initialTopicId={learnInitialTopic} />
           )}
           {currentSection === 'profile' && <ProfileSection />}
+          {currentSection === 'gym' && <GymSection />}
         </main>
       </div>
 
@@ -85,8 +88,10 @@ const MainAppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <FitMateProvider>
-      <MainAppContent />
-    </FitMateProvider>
+    <AuthProvider>
+      <FitMateProvider>
+        <MainAppContent />
+      </FitMateProvider>
+    </AuthProvider>
   );
 }

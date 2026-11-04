@@ -1,4 +1,18 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useAuth } from './AuthContext';
+import { saveSession, subscribeSessions } from '../lib/cloudStore';
+import {
+  bestSet,
+  computeStreak,
+  exerciseKey,
+  historyFor,
+  localDate,
+  missedDaysThisWeek,
+  quickVersion,
+  suggestNext,
+  type Suggestion,
+} from '../lib/progression';
+import type { ExerciseLog, WorkoutSession } from '../types/cloud';
 import {
   AchievementBadge,
   ChatMessage,
@@ -47,6 +61,7 @@ const STORAGE_KEYS = {
   OVERLOAD: 'fitmate_overload_v1',
   SCHEDULE: 'fitmate_schedule_v1',
   FAVORITES: 'fitmate_favorite_exercises_v1',
+  SKIPPED_DAYS: 'fitmate_skipped_days_v1',
 };
 
 interface FitMateContextType {
@@ -83,6 +98,17 @@ interface FitMateContextType {
   substituteExercise: (dayId: string, exerciseIndex: number, newExercise: Exercise) => void;
   addExerciseToWorkoutDay: (dayId: string, exercise: Exercise) => void;
 
+  // Smart logger (real workout history)
+  sessions: WorkoutSession[];
+  sessionsLoaded: boolean;
+  suggestionFor: (exercise: Exercise) => Suggestion;
+  currentSuggestion: Suggestion | null;
+  isQuickWorkout: boolean;
+  missedDays: { day: WorkoutDay; date: string }[];
+  skipMissedDay: (date: string, dayId: string) => void;
+  /** Swap only for today's session (e.g. equipment busy), without changing the plan */
+  swapExerciseForToday: (exerciseIndex: number, newExercise: Exercise) => void;
+
   // Exercise Library Favorites
   savedExerciseIds: string[];
   toggleFavoriteExercise: (id: string) => void;
@@ -91,7 +117,7 @@ interface FitMateContextType {
   // Rest Timer
   isTimerRunning: boolean;
   restTimerSeconds: number;
-  startWorkout: (dayId?: string) => void;
+  startWorkout: (dayId?: string, options?: { quick?: boolean }) => void;
   closeWorkoutMode: () => void;
   completeSet: () => void;
   nextExercise: () => void;
@@ -175,6 +201,7 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Navigation & History Stack
   const [currentSection, setCurrentSection] = useState<NavigationSection>(() => {
   try {
+    if (window.location.hash.startsWith('#join/') || window.location.hash.startsWith('#checkin/')) return 'gym';
     return localStorage.getItem(STORAGE_KEYS.PROFILE) ? 'dashboard' : 'landing';
   } catch {
     return 'landing';
@@ -597,7 +624,12 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isFavoriteExercise = (id: string) => savedExerciseIds.includes(id);
 
-  const [selectedScheduleDayId, setSelectedScheduleDayId] = useState<string>('monday');
+  const { uid, authLoading } = useAuth();
+
+  const [selectedScheduleDayId, setSelectedScheduleDayId] = useState<string>(() => {
+    const id = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
+    return id;
+  });
   const [isWorkoutMode, setIsWorkoutMode] = useState<boolean>(false);
   const [activeDayId, setActiveDayId] = useState<string>('monday');
   const [activeExerciseIndex, setActiveExerciseIndex] = useState<number>(0);
@@ -613,28 +645,61 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     caloriesBurned: number;
   } | null>(null);
 
-  // Progressive Overload records: exerciseId -> { maxWeight: number, reps: number, date: string }
-  const [overloadHistory, setOverloadHistory] = useState<Record<string, { weight: number; reps: number }>>(() => {
+  // ── Real workout history (cloud when signed in, this browser for guests) ──
+  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
+  useEffect(() => {
+    if (authLoading) return;
+    setSessionsLoaded(false);
+    return subscribeSessions(uid, list => {
+      setSessions(list);
+      setSessionsLoaded(true);
+    });
+  }, [uid, authLoading]);
+
+  const suggestionFor = (exercise: Exercise) => suggestNext(exercise, sessions);
+
+  // Missed training days this week (can be done today or skipped)
+  const [skippedDays, setSkippedDays] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.OVERLOAD);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return {
-      'ex-1': { weight: 60, reps: 8 },
-      'ex-2': { weight: 18, reps: 10 },
-      'ex-7': { weight: 45, reps: 10 },
-      'ex-10': { weight: 80, reps: 6 },
-    };
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.SKIPPED_DAYS) || '[]');
+    } catch {
+      return [];
+    }
   });
+  const skipMissedDay = (date: string, dayId: string) => {
+    setSkippedDays(prev => {
+      const next = [...prev.filter(x => x >= localDate(new Date(Date.now() - 14 * 864e5))), `${date}:${dayId}`];
+      try {
+        localStorage.setItem(STORAGE_KEYS.SKIPPED_DAYS, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    showToast('Okay, skipped. Your week moves on. 👍', 'info');
+  };
+
+  // Active workout: quick mode + today-only swaps live on top of the saved plan
+  const [isQuickWorkout, setIsQuickWorkout] = useState(false);
+  const [todaySwaps, setTodaySwaps] = useState<Record<number, Exercise>>({});
+  const sessionLogRef = useRef<Record<number, ExerciseLog>>({});
+  const startedAtRef = useRef<number>(Date.now());
 
   // Active workout set-by-set logging
   const [activeSetsLog, setActiveSetsLog] = useState<SetLog[]>([]);
 
   const activeWorkoutDay = useMemo(() => {
-    return workoutSchedule.find(d => d.id === activeDayId) || workoutSchedule[0];
-  }, [workoutSchedule, activeDayId]);
+    const base = workoutSchedule.find(d => d.id === activeDayId) || workoutSchedule[0];
+    const day = isQuickWorkout ? quickVersion(base) : base;
+    if (!Object.keys(todaySwaps).length) return day;
+    return { ...day, exercises: day.exercises.map((ex, i) => todaySwaps[i] || ex) };
+  }, [workoutSchedule, activeDayId, isQuickWorkout, todaySwaps]);
 
   const currentExercise = activeWorkoutDay?.exercises[activeExerciseIndex];
+
+  const currentSuggestion = useMemo(
+    () => (currentExercise ? suggestNext(currentExercise, sessions) : null),
+    [currentExercise, sessions],
+  );
 
   // Set-by-set weight and rep updater
   const updateSetWeight = (setNumber: number, weightKg: number) => {
@@ -650,19 +715,26 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const totalWorkoutVolumeKg = useMemo(() => {
-    return activeSetsLog
-      .filter(s => s.completed)
-      .reduce((acc, s) => acc + s.weightKg * s.actualReps, 0);
-  }, [activeSetsLog]);
+    const done = Object.values(sessionLogRef.current) as ExerciseLog[];
+    const logged = done.reduce((sum, e) => sum + e.sets.reduce((a, s) => a + s.weightKg * s.reps, 0), 0);
+    const current = activeSetsLog.filter(s => s.completed).reduce((acc, s) => acc + s.weightKg * s.actualReps, 0);
+    return logged + current;
+  }, [activeSetsLog, activeExerciseIndex]);
 
   const previousBestForExercise = useMemo(() => {
     if (!currentExercise) return null;
-    return overloadHistory[currentExercise.id] || null;
-  }, [currentExercise, overloadHistory]);
+    const hist = historyFor(sessions, exerciseKey(currentExercise));
+    let best: { weight: number; reps: number } | null = null;
+    for (const h of hist) {
+      const b = bestSet(h.log.sets);
+      if (b && (!best || b.weightKg * (1 + b.reps / 30) > best.weight * (1 + best.reps / 30))) best = { weight: b.weightKg, reps: b.reps };
+    }
+    return best;
+  }, [currentExercise, sessions]);
 
   // Rest Timer ticking
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isTimerRunning && restTimerSeconds > 0) {
       interval = setInterval(() => {
         setRestTimerSeconds(prev => {
@@ -678,26 +750,46 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearInterval(interval);
   }, [isTimerRunning, restTimerSeconds]);
 
+  /** Pre-fill sets with today's suggestion (last numbers + smart progression). */
   const initSetsForExercise = (exercise: Exercise) => {
-    const defaultWt = exercise.defaultWeightKg || 20;
-    const defaultReps = parseInt(exercise.reps.split('-')[0]) || 10;
+    const s = suggestNext(exercise, sessions);
     const sets: SetLog[] = Array.from({ length: exercise.sets }, (_, i) => ({
       setNumber: i + 1,
-      targetReps: defaultReps,
-      actualReps: defaultReps,
-      weightKg: defaultWt,
+      targetReps: s.reps,
+      actualReps: s.reps,
+      weightKg: s.weightKg,
       completed: false,
     }));
     setActiveSetsLog(sets);
   };
 
-  const startWorkout = (dayId?: string) => {
+  /** Keeps the sets completed so far for the current exercise before moving on. */
+  const recordCurrentExercise = (log: SetLog[] = activeSetsLog) => {
+    if (!currentExercise) return;
+    const done = log.filter(s => s.completed);
+    if (!done.length) return;
+    sessionLogRef.current[activeExerciseIndex] = {
+      key: exerciseKey(currentExercise),
+      name: currentExercise.name,
+      exerciseDbId: currentExercise.exerciseDbId,
+      equipment: currentExercise.equipment,
+      targetReps: currentExercise.reps,
+      sets: done.map(s => ({ weightKg: Number(s.weightKg) || 0, reps: Number(s.actualReps) || 0 })),
+    };
+  };
+
+  const startWorkout = (dayId?: string, options?: { quick?: boolean }) => {
     const targetDayId = dayId || selectedScheduleDayId || 'monday';
-    const targetDay = workoutSchedule.find(d => d.id === targetDayId) || workoutSchedule[0];
-    if (targetDay.isRest || targetDay.exercises.length === 0) {
+    const baseDay = workoutSchedule.find(d => d.id === targetDayId) || workoutSchedule[0];
+    if (baseDay.isRest || baseDay.exercises.length === 0) {
       showToast('Today is scheduled as a Rest & Recovery day. Take it easy!', 'info');
       return;
     }
+    const targetDay = options?.quick ? quickVersion(baseDay) : baseDay;
+    setIsQuickWorkout(Boolean(options?.quick));
+    setTodaySwaps({});
+    sessionLogRef.current = {};
+    startedAtRef.current = Date.now();
     setActiveDayId(targetDayId);
     setActiveExerciseIndex(0);
     setActiveSetIndex(1);
@@ -710,6 +802,15 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const swapExerciseForToday = (exerciseIndex: number, newExercise: Exercise) => {
+    setTodaySwaps(prev => ({ ...prev, [exerciseIndex]: newExercise }));
+    if (exerciseIndex === activeExerciseIndex) {
+      setActiveSetIndex(1);
+      initSetsForExercise(newExercise);
+    }
+    showToast(`Swapped to "${newExercise.name}" for today. Your plan stays the same. 🔄`);
+  };
+
   const closeWorkoutMode = () => {
     setIsWorkoutMode(false);
     setIsTimerRunning(false);
@@ -718,30 +819,16 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const completeSet = () => {
     if (!currentExercise) return;
 
-    // Mark current set as completed in log
-    setActiveSetsLog(prev =>
-      prev.map(s => (s.setNumber === activeSetIndex ? { ...s, completed: true } : s))
-    );
-
-    // Save overload record
-    const curSet = activeSetsLog.find(s => s.setNumber === activeSetIndex);
-    if (curSet && curSet.weightKg > 0) {
-      setOverloadHistory(prev => {
-        const next = {
-          ...prev,
-          [currentExercise.id]: {
-            weight: curSet.weightKg,
-            reps: curSet.actualReps,
-          },
-        };
-        try {
-          localStorage.setItem(STORAGE_KEYS.OVERLOAD, JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-    }
+    const updatedLog = activeSetsLog.map(s => (s.setNumber === activeSetIndex ? { ...s, completed: true } : s));
+    setActiveSetsLog(updatedLog);
+    recordCurrentExercise(updatedLog);
 
     if (activeSetIndex < currentExercise.sets) {
+      // Carry this set's numbers forward if the next set hasn't been edited
+      const cur = updatedLog.find(s => s.setNumber === activeSetIndex);
+      if (cur) {
+        setActiveSetsLog(prev => prev.map(s => (s.setNumber === activeSetIndex + 1 && !s.completed ? { ...s, weightKg: cur.weightKg } : s)));
+      }
       setActiveSetIndex(prev => prev + 1);
       setRestTimerSeconds(currentExercise.restSeconds);
       setIsTimerRunning(true);
@@ -764,6 +851,7 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const nextExercise = () => {
+    recordCurrentExercise();
     if (activeExerciseIndex < activeWorkoutDay.exercises.length - 1) {
       const nextIdx = activeExerciseIndex + 1;
       const nextEx = activeWorkoutDay.exercises[nextIdx];
@@ -778,6 +866,7 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const prevExercise = () => {
+    recordCurrentExercise();
     if (activeExerciseIndex > 0) {
       const prevIdx = activeExerciseIndex - 1;
       const prevEx = activeWorkoutDay.exercises[prevIdx];
@@ -799,71 +888,85 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const finishWorkout = () => {
+    recordCurrentExercise();
     setIsWorkoutMode(false);
     setIsTimerRunning(false);
 
-    const totalSets = activeWorkoutDay.exercises.reduce((acc, ex) => acc + ex.sets, 0);
-    const estimatedCalories = Math.round(activeWorkoutDay.durationMinutes * 8.5);
+    const exercises = Object.keys(sessionLogRef.current)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map(i => sessionLogRef.current[i]);
+    const setsCount = exercises.reduce((n, e) => n + e.sets.length, 0);
+    const totalVolumeKg = Math.round(exercises.reduce((sum, e) => sum + e.sets.reduce((a, s) => a + s.weightKg * s.reps, 0), 0));
+    const endedAt = Date.now();
+    const durationMin = Math.max(1, Math.round((endedAt - startedAtRef.current) / 60000));
+    // Rough estimate: ~6 kcal per active minute of resistance training for a 70 kg person
+    const estimatedCalories = Math.round(durationMin * 6 * (userProfile.weightKg / 70));
 
     const summary = {
-      duration: `${activeWorkoutDay.durationMinutes}m`,
-      exercisesCount: activeWorkoutDay.exercises.length,
-      setsCount: totalSets,
-      totalVolumeKg: Math.max(1200, totalWorkoutVolumeKg || 3450),
+      duration: `${durationMin}m`,
+      exercisesCount: exercises.length,
+      setsCount,
+      totalVolumeKg,
       caloriesBurned: estimatedCalories,
     };
     setWorkoutSummary(summary);
     setIsWorkoutCompleteModalOpen(true);
 
-    // Increment completed workouts and streak
-    setUserProfile(prev => {
-      const updated = {
-        ...prev,
-        completedWorkoutsCount: prev.completedWorkoutsCount + 1,
-        streakDays: prev.streakDays + 1,
-      };
-      try {
-        localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
+    if (!setsCount) {
+      showToast('No sets were completed, so nothing was saved.', 'info');
+      return;
+    }
 
-    // Add Progress History Entry with estimated calories
-    const todayStr = new Date().toISOString().split('T')[0];
-    const latestEntry = progressEntries[0];
-    const newProgressEntry: ProgressEntry = {
-      id: `prog-wo-${Date.now()}`,
+    const todayStr = localDate();
+    const session: WorkoutSession = {
+      id: `ws-${endedAt}-${Math.random().toString(36).slice(2, 7)}`,
       date: todayStr,
-      weightKg: userProfile.weightKg,
-      waistInches: latestEntry ? latestEntry.waistInches : 31.5,
-      chestInches: latestEntry ? latestEntry.chestInches : 39.5,
-      armsInches: latestEntry ? latestEntry.armsInches : 15.0,
-      thighsInches: latestEntry ? latestEntry.thighsInches : 22.8,
-      bodyFatPercent: latestEntry?.bodyFatPercent || 15.0,
-      notes: `Finished ${activeWorkoutDay.splitName} Workout (${activeWorkoutDay.exercises.length} exercises, ${totalSets} sets, ${summary.totalVolumeKg}kg total volume). ~${estimatedCalories} kcal burned (est).`,
+      startedAt: startedAtRef.current,
+      endedAt,
+      durationMin,
+      dayId: activeWorkoutDay.id,
+      splitName: activeWorkoutDay.splitName,
+      quick: isQuickWorkout || undefined,
+      exercises,
+      totalVolumeKg,
+      setsCount,
     };
-    setProgressEntries(prev => [newProgressEntry, ...prev]);
+    saveSession(uid, session).catch(() => showToast('Saved on this phone. It will sync when you are back online.', 'info'));
 
-    // Save completed workout session history
+    // Keep the old completed-workouts list for screens that still read it
     try {
       const existing = localStorage.getItem(STORAGE_KEYS.COMPLETED_WORKOUTS);
       const list = existing ? JSON.parse(existing) : [];
       list.push({
-        id: `cw-${Date.now()}`,
+        id: session.id,
         date: todayStr,
         dayId: activeWorkoutDay.id,
         splitName: activeWorkoutDay.splitName,
         caloriesBurned: estimatedCalories,
-        totalVolumeKg: summary.totalVolumeKg,
-        durationMinutes: activeWorkoutDay.durationMinutes,
-        exercisesCount: activeWorkoutDay.exercises.length,
-        setsCount: totalSets,
+        totalVolumeKg,
+        durationMinutes: durationMin,
+        exercisesCount: exercises.length,
+        setsCount,
       });
       localStorage.setItem(STORAGE_KEYS.COMPLETED_WORKOUTS, JSON.stringify(list));
     } catch {}
 
-    showToast(`Outstanding! Workout marked as complete! ~${estimatedCalories} kcal burned. 🎉`, 'success');
+    showToast(`Workout saved: ${setsCount} sets, ${totalVolumeKg.toLocaleString()} kg lifted. 🎉`, 'success');
   };
+
+  // Derived from real history (not counters that only go up)
+  const streakDays = useMemo(() => computeStreak(workoutSchedule, sessions), [workoutSchedule, sessions]);
+  const missedDays = useMemo(
+    () => missedDaysThisWeek(workoutSchedule, sessions, skippedDays),
+    [workoutSchedule, sessions, skippedDays],
+  );
+
+  // Streak and workout count come from real logged sessions
+  const userProfileView = useMemo(
+    () => ({ ...userProfile, streakDays, completedWorkoutsCount: sessions.length }),
+    [userProfile, streakDays, sessions.length],
+  );
 
   const finishWorkoutEarly = () => {
     finishWorkout();
@@ -877,14 +980,14 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const achievements = useMemo(() => {
     return INITIAL_ACHIEVEMENTS.map(ach => {
       if (ach.id === 'ach-2') {
-        return { ...ach, progress: userProfile.streakDays, unlocked: userProfile.streakDays >= 14 };
+        return { ...ach, progress: Math.min(ach.maxProgress, streakDays), unlocked: streakDays >= 14 };
       }
       if (ach.id === 'ach-1') {
-        return { ...ach, unlocked: userProfile.completedWorkoutsCount >= 1 };
+        return { ...ach, unlocked: sessions.length >= 1 };
       }
       return ach;
     });
-  }, [userProfile]);
+  }, [streakDays, sessions.length]);
 
   // AI Assistant Chat state
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
@@ -969,7 +1072,7 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currentLanguage,
         setLanguage,
         t,
-        userProfile,
+        userProfile: userProfileView,
         updateProfile,
         resetAllData,
         healthMetrics,
@@ -987,6 +1090,14 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         previousBestForExercise,
         substituteExercise,
         addExerciseToWorkoutDay,
+        sessions,
+        sessionsLoaded,
+        suggestionFor,
+        currentSuggestion,
+        isQuickWorkout,
+        missedDays,
+        skipMissedDay,
+        swapExerciseForToday,
         savedExerciseIds,
         toggleFavoriteExercise,
         isFavoriteExercise,

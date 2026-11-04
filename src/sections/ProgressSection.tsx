@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { ProgressEntry } from '../types';
+import { StrengthProgress } from '../components/StrengthProgress';
 
 export const ProgressSection: React.FC = () => {
   const { progressEntries, addProgressEntry, userProfile, achievements, logSteps, logSleep, stepsLog, sleepLog } = useFitMate();
@@ -136,6 +137,13 @@ export const ProgressSection: React.FC = () => {
         </div>
       </div>
 
+      {/* Strength & consistency from real logged workouts */}
+      <section className="flex flex-col gap-3">
+        <h2 className="font-headline text-xl font-bold text-[#d8e3fb]">Workout progress</h2>
+        <StrengthProgress />
+      </section>
+
+      <h2 className="font-headline text-xl font-bold text-[#d8e3fb] -mb-4">Body measurements</h2>
       {/* Main Grid: Weight Progress & Trajectory */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Weight Progress Cards */}

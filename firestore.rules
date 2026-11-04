@@ -1,0 +1,92 @@
+rules_version = '2';
+
+// FITORA security rules.
+//  - Each person can only see and change their own data (users/{uid}/...).
+//  - A gym's owner manages that gym's members, payments and check-ins.
+//  - A member linked by an invite link can read their own membership and check in with the
+//    reception QR code, but can never see other members or the gym's payments.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
+    function onlyChanges(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+    // ── Personal data ────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read, write: if isMe(uid);
+
+      match /sessions/{sessionId} {
+        allow read, write: if isMe(uid)
+          && (request.method == 'delete' || request.resource.data.exercises is list);
+      }
+      match /private/{docId} {
+        allow read, write: if isMe(uid);
+      }
+    }
+
+    // ── Gyms ─────────────────────────────────────────────────────────────────
+    match /gyms/{gymId} {
+      function gym() { return get(/databases/$(database)/documents/gyms/$(gymId)).data; }
+      function isOwner() { return signedIn() && gym().ownerUid == request.auth.uid; }
+      // For writes made in the same batch that creates the gym
+      function isOwnerAfter() {
+        return signedIn() && getAfter(/databases/$(database)/documents/gyms/$(gymId)).data.ownerUid == request.auth.uid;
+      }
+      function member(memberId) { return get(/databases/$(database)/documents/gyms/$(gymId)/members/$(memberId)).data; }
+
+      // Gym name/city are shown to members on their invite screen
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
+      allow update: if isOwner() && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if isOwner();
+
+      match /members/{memberId} {
+        allow read: if isOwner() || (signedIn() && resource.data.uid == request.auth.uid);
+        allow create, delete: if isOwner();
+        allow update: if isOwner()
+          // A member claiming their record with the code from their invite link
+          || (signedIn()
+              && (resource.data.uid == null || resource.data.uid == request.auth.uid)
+              && request.resource.data.uid == request.auth.uid
+              && onlyChanges(['uid', 'linkedAt', 'claimCode'])
+              && request.resource.data.claimCode is string
+              && get(/databases/$(database)/documents/gyms/$(gymId)/invites/$(request.resource.data.claimCode)).data.memberId == memberId);
+      }
+
+      // Knowing the code (from the invite link) lets you look up which record is yours
+      match /invites/{code} {
+        allow get: if signedIn();
+        allow list: if isOwner();
+        allow write: if isOwner();
+      }
+
+      match /payments/{paymentId} {
+        allow read, write: if isOwner();
+      }
+
+      // Reception QR token(s). Only the owner can list them; anyone holding a token can check it exists.
+      match /qr/{token} {
+        allow get: if signedIn();
+        allow list: if isOwner();
+        allow write: if isOwnerAfter();
+      }
+
+      match /checkins/{checkinId} {
+        allow read: if isOwner() || (signedIn() && resource.data.uid == request.auth.uid);
+        allow delete: if isOwner();
+        allow create, update: if isOwner()
+          || (signedIn()
+              && request.resource.data.uid == request.auth.uid
+              && request.resource.data.source == 'qr'
+              && checkinId == request.resource.data.memberId + '_' + request.resource.data.date
+              && member(request.resource.data.memberId).uid == request.auth.uid
+              && exists(/databases/$(database)/documents/gyms/$(gymId)/qr/$(request.resource.data.token)));
+      }
+    }
+  }
+}

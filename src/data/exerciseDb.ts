@@ -5,6 +5,8 @@
  * never slows down the first page load.
  */
 
+import type { Exercise } from '../types';
+
 export type ExerciseLevel = 'beginner' | 'intermediate' | 'expert';
 
 export interface DbExercise {
@@ -177,4 +179,60 @@ export function findExerciseByName(db: DbExercise[], name: string): DbExercise |
     }
   }
   return bestScore >= 0.5 ? best : null;
+}
+
+// ── Turning a library exercise into a plan exercise, and finding swaps ───────
+
+/** Plan-ready exercise from a library entry. `base` keeps sets/reps/rest from the exercise it replaces. */
+export function toPlanExercise(ex: DbExercise, base?: Partial<Exercise>): Exercise {
+  const stretch = ex.category === 'stretching';
+  return {
+    id: `ex-lib-${ex.id}-${Date.now().toString(36)}`,
+    name: ex.name,
+    targetMuscle: ex.primaryMuscles.map(titleCase).join(', '),
+    targetMuscles: ex.primaryMuscles.map(titleCase),
+    primaryMuscles: ex.primaryMuscles.map(titleCase),
+    secondaryMuscles: ex.secondaryMuscles.map(titleCase),
+    difficulty: LEVEL_LABEL[ex.level],
+    sets: base?.sets ?? (stretch ? 2 : 3),
+    reps: base?.reps ?? (stretch ? '30s hold' : ex.category === 'cardio' ? '45s' : '10-12'),
+    restSeconds: base?.restSeconds ?? 60,
+    instructions: ex.instructions.join(' '),
+    formTips: [],
+    imageUrl: exercisePhotos(ex)[0] || '',
+    equipment: equipmentLabel(ex.equipment),
+    exerciseDbId: ex.id,
+    images: ex.images,
+    calorieEstimate: base?.calorieEstimate ?? (stretch ? 10 : 30),
+  };
+}
+
+export type SwapEquipment = 'any' | 'dumbbell' | 'body only' | 'cable' | 'machine' | 'barbell' | 'bands' | 'kettlebells';
+
+/**
+ * Alternatives that train the same main muscle, for when the equipment is busy.
+ * Prefers a different piece of equipment, the same movement type (compound/isolation),
+ * the same push/pull pattern, and well-known exercises.
+ */
+export function findAlternatives(db: DbExercise[], current: DbExercise | null, fallbackMuscle: string, opts: { equipment?: SwapEquipment; limit?: number } = {}): DbExercise[] {
+  const muscle = (current?.primaryMuscles[0] || fallbackMuscle || '').toLowerCase();
+  const want = opts.equipment && opts.equipment !== 'any' ? opts.equipment : null;
+  const scored = db
+    .filter((e) => e.id !== current?.id && e.primaryMuscles.includes(muscle) && e.category !== 'stretching')
+    .filter((e) => (want ? e.equipment === want : true))
+    .map((e) => {
+      let score = 0;
+      if (current) {
+        if (e.equipment !== current.equipment) score += 3;
+        if (e.mechanic && e.mechanic === current.mechanic) score += 2;
+        if (e.force && e.force === current.force) score += 2;
+        if (e.category === current.category) score += 1;
+      }
+      const rank = popularRank(e.id);
+      if (rank < Number.MAX_SAFE_INTEGER) score += 4 - rank / 20;
+      if (e.level === 'beginner') score += 0.5;
+      return { e, score };
+    })
+    .sort((a, b) => b.score - a.score || a.e.name.length - b.e.name.length);
+  return scored.slice(0, opts.limit ?? 6).map((x) => x.e);
 }

@@ -10,7 +10,8 @@ export type NavigationSection =
   | 'analytics'
   | 'progress'
   | 'learn'
-  | 'profile';
+  | 'profile'
+  | 'gym';
 
 export type SupportedLanguage = 'en' | 'kn' | 'te' | 'ta' | 'ml';
 
