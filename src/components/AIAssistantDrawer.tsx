@@ -148,8 +148,14 @@ export const AIAssistantDrawer: React.FC = () => {
 
 /** Light formatting for coach replies: **bold**, bullet lines and headings. Builds React nodes (no HTML injection). */
 const inline = (line: string) =>
-  line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-    part.startsWith('**') && part.endsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : <React.Fragment key={i}>{part}</React.Fragment>,
+  line.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={i}>{part.slice(2, -2)}</strong>
+    ) : part.length > 2 && part.startsWith('*') && part.endsWith('*') ? (
+      <em key={i}>{part.slice(1, -1)}</em>
+    ) : (
+      <React.Fragment key={i}>{part}</React.Fragment>
+    ),
   );
 
 const FormattedText: React.FC<{ text: string }> = ({ text }) => (
