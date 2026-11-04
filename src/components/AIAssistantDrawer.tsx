@@ -96,7 +96,7 @@ export const AIAssistantDrawer: React.FC = () => {
                     : 'bg-[#152031] text-[#d8e3fb] border border-[#1f2a3c] rounded-bl-none shadow-md'
                 }`}
               >
-                <div className="whitespace-pre-line">{msg.text}</div>
+                <FormattedText text={msg.text} />
               </div>
               <span className="text-[10px] text-[#86948a] mt-1 px-1">{msg.timestamp}</span>
 
@@ -145,3 +145,30 @@ export const AIAssistantDrawer: React.FC = () => {
     </div>
   );
 };
+
+/** Light formatting for coach replies: **bold**, bullet lines and headings. Builds React nodes (no HTML injection). */
+const inline = (line: string) =>
+  line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : <React.Fragment key={i}>{part}</React.Fragment>,
+  );
+
+const FormattedText: React.FC<{ text: string }> = ({ text }) => (
+  <div className="flex flex-col gap-1">
+    {text.split('\n').map((raw, i) => {
+      const line = raw.trimEnd();
+      if (!line.trim()) return <div key={i} className="h-1" />;
+      const bullet = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)$/);
+      if (bullet) {
+        return (
+          <div key={i} className="flex gap-2 pl-1">
+            <span className="text-[#4edea3]">•</span>
+            <span>{inline(bullet[1])}</span>
+          </div>
+        );
+      }
+      const heading = line.match(/^#{1,4}\s+(.*)$/);
+      if (heading) return <div key={i} className="font-bold mt-1">{inline(heading[1])}</div>;
+      return <div key={i}>{inline(line)}</div>;
+    })}
+  </div>
+);

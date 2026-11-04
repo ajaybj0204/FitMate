@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import { useAuth } from './AuthContext';
 import { saveSession, subscribeSessions } from '../lib/cloudStore';
 import { prepareLocalData } from '../lib/localData';
+import { askCoach } from '../lib/coachApi';
 import { playRestCompleteChime } from '../utils/audioCues';
 import {
   bestSet,
@@ -12,6 +13,7 @@ import {
   missedDaysThisWeek,
   quickVersion,
   suggestNext,
+  todayDayId,
   type Suggestion,
 } from '../lib/progression';
 import type { ExerciseLog, WorkoutSession } from '../types/cloud';
@@ -1057,12 +1059,12 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     {
       id: 'init-1',
       sender: 'assistant',
-      text: `Hello ${userProfile.name}! 👋 I am your FITORA AI Fitness & Nutrition Coach. Grounded in exercise biomechanics and tailored Indian nutrition, your daily target is ${healthMetrics.dailyCalorieTarget} kcal with ${healthMetrics.proteinTarget}g protein. How can I guide your progress today?`,
+      text: `Hi ${userProfile.name.split(' ')[0]}! 👋 I'm your FITORA coach. Your daily target is ${healthMetrics.dailyCalorieTarget} kcal and ${healthMetrics.proteinTarget} g protein. Ask me about your workouts, food or progress. When you're signed in, I can see your logged workouts and meals.`,
       timestamp: 'Just now',
       suggestedPrompts: [
-        'How to apply progressive overload on Bench Press?',
+        'How did my last workouts go?',
         'Suggest budget Indian vegetarian meals under ₹150',
-        'How does Mifflin-St Jeor calculate my BMR?',
+        'I have only 30 minutes today. What should I do?',
         'What should I eat before my workout?',
       ],
     },
@@ -1072,7 +1074,8 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAIAssistantOpen(prev => (open !== undefined ? open : !prev));
   };
 
-  const sendAIMessage = (text: string) => {
+  /** Rule-based answers: used when signed out (the AI coach needs an account). */
+  const sendRuleMessage = (text: string) => {
     const userMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
       sender: 'user',
@@ -1108,6 +1111,61 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
       setChatMessages(prev => [...prev, botMsg]);
     }, 600);
+  };
+
+  // Snapshot of the user's real data for the AI coach (small; first name only)
+  const coachContext = () => {
+    const today = workoutSchedule.find(d => d.id === todayDayId());
+    return {
+      profile: {
+        firstName: userProfile.name.split(' ')[0], age: userProfile.age, sex: userProfile.sex, heightCm: userProfile.heightCm,
+        weightKg: userProfile.weightKg, goal: userProfile.goal, experience: userProfile.experience, activity: userProfile.activityLevel,
+        daysPerWeek: userProfile.workoutDaysPerWeek, location: userProfile.workoutLocation, diet: userProfile.dietPreference, allergies: userProfile.allergies,
+      },
+      targets: { kcal: healthMetrics.dailyCalorieTarget, proteinG: healthMetrics.proteinTarget, waterL: healthMetrics.waterTargetLiters, bmr: healthMetrics.bmr },
+      todayPlan: today ? (today.isRest ? 'Rest day' : `${today.splitName}: ${today.exercises.map(e => `${e.name} ${e.sets}x${e.reps}`).join(', ')}`) : null,
+      streakDays,
+      workoutsLogged: sessions.length,
+      missedThisWeek: missedDays.map(m => m.day.dayName),
+      recentWorkouts: sessions.slice(0, 8).map(s => ({
+        date: s.date,
+        split: s.splitName,
+        minutes: s.durationMin,
+        exercises: s.exercises.map(e => `${e.name}: ${e.sets.map(x => (x.weightKg ? `${x.weightKg}x${x.reps}` : `${x.reps}`)).join(', ')}`),
+      })),
+      foodToday: {
+        eaten: meals.filter(m => m.completed).map(m => `${m.name} (${m.calories} kcal, ${m.protein}g protein)`),
+        kcal: consumedCalories,
+        proteinG: consumedProtein,
+      },
+      waterTodayMl: hydrationMl,
+      latestCheckin: progressEntries.length ? progressEntries[progressEntries.length - 1] : null,
+    };
+  };
+
+  /** Signed in: the real AI coach (server-side Gemini). Signed out: rule-based answers. */
+  const sendAIMessage = (text: string) => {
+    if (!uid) {
+      sendRuleMessage(text);
+      return;
+    }
+    const history = chatMessages
+      .filter(m => !m.id.startsWith('init') && m.id !== 'typing')
+      .slice(-8)
+      .map(m => ({ role: m.sender, text: m.text }));
+    setChatMessages(prev => [
+      ...prev,
+      { id: `msg-${Date.now()}`, sender: 'user', text, timestamp: 'Just now' },
+      { id: 'typing', sender: 'assistant', text: 'Thinking…', timestamp: '' },
+    ]);
+    askCoach(text, coachContext(), history)
+      .catch((e: Error) => `⚠️ ${e.message}`)
+      .then(reply =>
+        setChatMessages(prev => [
+          ...prev.filter(m => m.id !== 'typing'),
+          { id: `msg-${Date.now() + 1}`, sender: 'assistant', text: reply, timestamp: 'Just now' },
+        ]),
+      );
   };
 
   const resetAllData = () => {

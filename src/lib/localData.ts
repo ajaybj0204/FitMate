@@ -73,6 +73,9 @@ function dailyReset() {
     write('fitmate_hydration_v1', '0');
     const steps = read<Record<string, unknown>>('fitmate_steps_v1');
     if (steps) write('fitmate_steps_v1', { ...steps, date: '', currentSteps: 0, distanceKm: 0, caloriesBurned: 0 });
+    // Food typed in yesterday ("Log what you ate") belongs to that day: remove it
+    const meals = read<WithId[]>('fitmate_meals_v1');
+    if (Array.isArray(meals)) write('fitmate_meals_v1', meals.filter((m) => !/^meal-\d{12,}$/.test(m.id || '')));
     untick<Tickable>('fitmate_meals_v1', 'completed');
     untick<Tickable>('fitmate_daily_plan_v1', 'completed');
   }

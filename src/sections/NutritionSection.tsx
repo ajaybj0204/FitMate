@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { Meal } from '../types';
+import { FoodLogger } from '../components/FoodLogger';
 
 export const NutritionSection: React.FC = () => {
   const {
@@ -91,6 +92,9 @@ export const NutritionSection: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {/* Type what you ate → AI estimate */}
+      <FoodLogger />
 
       {/* Daily Targets Bento Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
