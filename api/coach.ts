@@ -20,8 +20,10 @@ interface Res {
   setHeader: (k: string, v: string) => void;
 }
 
-// Newest first; on 404 (retired) or 429/5xx (busy) the next one is tried
-const MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest'];
+// Fast models first (flash-lite answers in ~1-2 s with minimal thinking; bigger flash models
+// can take minutes on the free tier). On 404 (retired), 429/5xx (busy) or a timeout, the next is tried.
+const MODELS = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-flash-latest'];
+const PER_MODEL_TIMEOUT_MS = 20_000;
 const PER_USER_PER_HOUR = 40;
 const hits = new Map<string, number[]>(); // best effort (per warm instance)
 
@@ -68,11 +70,21 @@ async function gemini(body: Record<string, unknown>): Promise<string> {
   if (!key) throw new Error('AI is not set up yet.');
   let lastErr = '';
   for (const model of MODELS) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify(body),
-    });
+    // Keep "thinking" minimal: these are short, practical answers and speed matters
+    const gc = (body.generationConfig || {}) as Record<string, unknown>;
+    const payload = { ...body, generationConfig: { ...gc, thinkingConfig: { thinkingLevel: 'minimal' } } };
+    let r: Response;
+    try {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(PER_MODEL_TIMEOUT_MS),
+      });
+    } catch {
+      lastErr = `${model}: timeout`;
+      continue;
+    }
     if (r.ok) {
       const j = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
       const text = j.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
@@ -82,7 +94,7 @@ async function gemini(body: Record<string, unknown>): Promise<string> {
     }
     lastErr = `${model}: ${r.status}`;
     // Model retired or overloaded → try the next one
-    if (![404, 429, 500, 503].includes(r.status)) break;
+    if (![400, 404, 429, 500, 503].includes(r.status)) break;
   }
   throw new Error(`AI unavailable (${lastErr})`);
 }
