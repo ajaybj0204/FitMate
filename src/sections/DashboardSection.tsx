@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useFitMate } from '../context/FitMateContext';
+import { localDate } from '../lib/progression';
 
 export const DashboardSection: React.FC = () => {
   const {
@@ -16,8 +17,24 @@ export const DashboardSection: React.FC = () => {
     hydrationMl,
     addWaterMl,
     waterGoalMl,
+    sessions,
     t,
   } = useFitMate();
+
+  // Mon–Sun of the current week, with minutes trained per day
+  const weekDays = useMemo(() => {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const date = localDate(d);
+      const day = sessions.filter(s => s.date === date);
+      return { label, date, isToday: date === localDate(now), minutes: day.reduce((n, s) => n + s.durationMin, 0), sets: day.reduce((n, s) => n + s.setsCount, 0) };
+    });
+  }, [sessions]);
+  const maxMinutes = Math.max(1, ...weekDays.map(d => d.minutes));
 
   // Dynamic greeting based on current local hour
   const greeting = useMemo(() => {
@@ -380,43 +397,26 @@ export const DashboardSection: React.FC = () => {
 
         {/* Right Column: Weekly Activity & Today's Nutrition */}
         <div className="flex flex-col gap-6">
-          {/* Weekly Activity Bar Chart Widget */}
+          {/* This week's workouts (from real logged sessions) */}
           <div className="bg-[#111c2d] p-6 rounded-2xl flex flex-col justify-between border border-[#1f2a3c] shadow-xl">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">Weekly Activity</h3>
-              <span className="text-xs text-[#4edea3] font-bold">Active Week</span>
+              <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">This Week</h3>
+              <span className="text-xs text-[#4edea3] font-bold">
+                {weekDays.filter(d => d.minutes > 0).length} / {userProfile.workoutDaysPerWeek} workouts
+              </span>
             </div>
             <p className="text-xs text-[#86948a] mb-5">
-              Daily effort and calories burned trend across the last 7 days.
+              {weekDays.some(d => d.minutes > 0) ? 'Minutes trained each day (from your logged workouts).' : 'No workouts logged this week yet. Your bars fill in as you train.'}
             </p>
-
-            {/* Inline Bar Chart Visualization */}
             <div className="flex items-end justify-between gap-2 h-36 pt-4 px-2 bg-[#152031] rounded-xl border border-[#1f2a3c]">
-              {[
-                { day: 'M', height: '65%', active: false, val: '420 kcal' },
-                { day: 'T', height: '85%', active: false, val: '510 kcal' },
-                { day: 'W', height: '40%', active: false, val: 'Rest/Mobility' },
-                { day: 'T', height: '90%', active: false, val: '540 kcal' },
-                { day: 'F', height: '75%', active: false, val: '460 kcal' },
-                { day: 'S', height: '100%', active: true, val: 'Peak Session' },
-                { day: 'S', height: '50%', active: false, val: 'Walk 8k' },
-              ].map((item, idx) => (
-                <div key={idx} className="flex flex-col items-center gap-1.5 flex-1 group relative">
+              {weekDays.map(item => (
+                <div key={item.date} className="flex flex-col items-center gap-1.5 flex-1 h-full justify-end" title={item.minutes ? `${item.minutes} min · ${item.sets} sets` : 'No workout'}>
+                  <span className="text-[10px] text-[#bbcabf] tabular-nums">{item.minutes || ''}</span>
                   <div
-                    className={`w-full rounded-t transition-all ${
-                      item.active
-                        ? 'bg-[#4edea3] shadow-md shadow-[#4edea3]/30'
-                        : 'bg-[#4edea3]/30 hover:bg-[#4edea3]'
-                    }`}
-                    style={{ height: item.height }}
+                    className={`w-full rounded-t transition-all ${item.isToday ? 'bg-[#4edea3] shadow-md shadow-[#4edea3]/30' : 'bg-[#4edea3]/40'}`}
+                    style={{ height: item.minutes ? `${Math.max(10, (item.minutes / maxMinutes) * 85)}%` : '3px' }}
                   />
-                  <span
-                    className={`text-xs ${
-                      item.active ? 'text-[#4edea3] font-bold' : 'text-[#86948a]'
-                    }`}
-                  >
-                    {item.day}
-                  </span>
+                  <span className={`text-xs pb-1 ${item.isToday ? 'text-[#4edea3] font-bold' : 'text-[#86948a]'}`}>{item.label}</span>
                 </div>
               ))}
             </div>

@@ -1,291 +1,166 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { useFitMate } from '../context/FitMateContext';
+import { exerciseKey, localDate } from '../lib/progression';
+
+/**
+ * Analytics from real data only: logged workouts, meals ticked as eaten today, and the
+ * sleep / steps the user logged. Anything not logged yet shows an empty state, never sample numbers.
+ */
+
+const mondayOf = (dateStr: string) => {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return localDate(d);
+};
+const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+const Panel: React.FC<{ title: string; subtitle?: string; children: React.ReactNode; className?: string }> = ({ title, subtitle, children, className = '' }) => (
+  <div className={`bg-[#152031] rounded-2xl border border-[#1f2a3c] p-5 ${className}`}>
+    <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">{title}</h3>
+    {subtitle && <p className="text-xs text-[#86948a] mt-0.5 mb-3">{subtitle}</p>}
+    {children}
+  </div>
+);
+
+const Bar: React.FC<{ label: string; value: number; max: number; text: string; tone?: string }> = ({ label, value, max, text, tone = '#4edea3' }) => (
+  <div>
+    <div className="flex justify-between text-xs mb-1">
+      <span className="text-[#bbcabf]">{label}</span>
+      <span className="text-[#d8e3fb] font-semibold tabular-nums">{text}</span>
+    </div>
+    <div className="h-2 rounded-full bg-[#0b1420] overflow-hidden">
+      <div className="h-full rounded-full" style={{ width: `${Math.min(100, max ? (value / max) * 100 : 0)}%`, background: tone }} />
+    </div>
+  </div>
+);
 
 export const AnalyticsSection: React.FC = () => {
-  const { userProfile, healthMetrics, totalWorkoutVolumeKg, stepsLog, sleepLog, progressEntries, t } =
-    useFitMate();
+  const { sessions, sessionsLoaded, workoutSchedule, healthMetrics, consumedCalories, consumedProtein, consumedCarbs, consumedFats, meals, stepsLog, sleepLog, navigateTo, t } = useFitMate();
 
-  const [activeMetricTab, setActiveMetricTab] = useState<'volume' | 'calories' | 'recovery'>('volume');
+  // Kg lifted per week, last 8 weeks
+  const weeks = useMemo(() => {
+    const thisMonday = mondayOf(localDate());
+    const out = Array.from({ length: 8 }, (_, i) => {
+      const d = new Date(thisMonday + 'T00:00:00');
+      d.setDate(d.getDate() - (7 - i) * 7);
+      return { start: localDate(d), volume: 0, count: 0 };
+    });
+    for (const s of sessions) {
+      const w = out.find((x) => x.start === mondayOf(s.date));
+      if (w) {
+        w.volume += s.totalVolumeKg;
+        w.count++;
+      }
+    }
+    return out;
+  }, [sessions]);
+
+  // Sets per muscle group (last 30 days), using the muscle listed on the plan's exercises
+  const muscleSplit = useMemo(() => {
+    const muscleOf = new Map<string, string>();
+    for (const day of workoutSchedule) for (const ex of day.exercises) muscleOf.set(exerciseKey(ex), (ex.targetMuscle || 'Other').split(',')[0].trim());
+    const since = localDate(new Date(Date.now() - 30 * 864e5));
+    const counts = new Map<string, number>();
+    for (const s of sessions) {
+      if (s.date < since) continue;
+      for (const e of s.exercises) {
+        const m = muscleOf.get(e.key) || 'Other';
+        counts.set(m, (counts.get(m) || 0) + e.sets.length);
+      }
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  }, [sessions, workoutSchedule]);
+
+  const maxVolume = Math.max(1, ...weeks.map((w) => w.volume));
+  const maxSets = Math.max(1, ...muscleSplit.map(([, n]) => n));
+  const eatenCount = meals.filter((m) => m.completed).length;
+  const sleepLoggedToday = sleepLog.date === localDate();
 
   return (
-    <div className="flex flex-col w-full gap-8 pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-[#4edea3] text-xs font-bold uppercase tracking-wider mb-1">
-            <span className="material-symbols-outlined text-[16px]">insights</span>
-            {t('analytics', 'Advanced Analytics')}
-          </div>
-          <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb]">
-            Performance &amp; Biometrics
-          </h1>
-          <p className="text-xs sm:text-sm text-[#bbcabf] mt-1">
-            Algorithmic insights tracking progressive overload, energy balance, and recovery readiness.
-          </p>
+    <div className="flex flex-col w-full gap-6 pb-12">
+      <div>
+        <div className="flex items-center gap-2 text-[#4edea3] text-xs font-bold uppercase tracking-wider mb-1">
+          <span className="material-symbols-outlined text-[16px]">insights</span>
+          {t('analytics', 'Analytics')}
         </div>
-
-        {/* Tab Selector */}
-        <div className="flex items-center gap-1.5 bg-[#111c2d] p-1 rounded-xl border border-[#1f2a3c]">
-          <button
-            onClick={() => setActiveMetricTab('volume')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeMetricTab === 'volume'
-                ? 'bg-[#4edea3] text-[#003824] shadow-sm'
-                : 'text-[#bbcabf] hover:text-[#d8e3fb]'
-            }`}
-          >
-            Volume &amp; Strength
-          </button>
-          <button
-            onClick={() => setActiveMetricTab('calories')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeMetricTab === 'calories'
-                ? 'bg-[#4edea3] text-[#003824] shadow-sm'
-                : 'text-[#bbcabf] hover:text-[#d8e3fb]'
-            }`}
-          >
-            Energy Balance
-          </button>
-          <button
-            onClick={() => setActiveMetricTab('recovery')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeMetricTab === 'recovery'
-                ? 'bg-[#4edea3] text-[#003824] shadow-sm'
-                : 'text-[#bbcabf] hover:text-[#d8e3fb]'
-            }`}
-          >
-            Recovery &amp; Sleep
-          </button>
-        </div>
+        <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb]">Your numbers</h1>
+        <p className="text-xs sm:text-sm text-[#bbcabf] mt-1">Built only from what you log: workouts, meals you tick as eaten, sleep and steps.</p>
       </div>
 
-      {/* Primary Chart Widget */}
-      <div className="bg-[#152031] p-6 sm:p-8 rounded-2xl border border-[#1f2a3c] shadow-xl flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#4edea3]">
-              {activeMetricTab === 'volume' && 'Weekly Tonnage Progression'}
-              {activeMetricTab === 'calories' && 'Caloric Balance vs Expenditure'}
-              {activeMetricTab === 'recovery' && 'Sleep Quality & Nervous System Readiness'}
-            </span>
-            <h2 className="font-headline text-2xl font-bold text-[#d8e3fb] mt-0.5">
-              {activeMetricTab === 'volume' && 'Total Working Volume: 14,850 kg'}
-              {activeMetricTab === 'calories' && `TDEE: ${healthMetrics.tdee} kcal / Day`}
-              {activeMetricTab === 'recovery' && `Recovery Score: ${sleepLog.recoveryScore}% (Optimal)`}
-            </h2>
-          </div>
-          <span className="text-xs font-bold text-[#4edea3] bg-[#10b981]/20 px-3 py-1 rounded-full">
-            +8.4% vs Last Cycle
-          </span>
-        </div>
-
-        {/* SVG Chart Visualization */}
-        <div className="h-56 sm:h-64 w-full bg-[#111c2d] rounded-xl p-4 border border-[#1f2a3c] flex flex-col justify-between relative overflow-hidden">
-          {/* Grid lines */}
-          <div className="absolute inset-0 flex flex-col justify-between p-6 pointer-events-none opacity-20">
-            <div className="border-b border-[#bbcabf]" />
-            <div className="border-b border-[#bbcabf]" />
-            <div className="border-b border-[#bbcabf]" />
-            <div className="border-b border-[#bbcabf]" />
-          </div>
-
-          {activeMetricTab === 'volume' && (
-            <div className="flex items-end justify-between gap-3 h-full pt-8 px-2 z-10">
-              {[
-                { label: 'Week 1', height: '55%', val: '11,200 kg' },
-                { label: 'Week 2', height: '68%', val: '12,450 kg' },
-                { label: 'Week 3', height: '82%', val: '13,900 kg' },
-                { label: 'Week 4 (Current)', height: '95%', val: '14,850 kg', active: true },
-              ].map((bar, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                  <span className="text-[11px] font-bold text-[#4edea3] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {bar.val}
-                  </span>
-                  <div
-                    className={`w-full max-w-[48px] rounded-t-xl transition-all duration-500 ${
-                      bar.active
-                        ? 'bg-gradient-to-t from-[#10b981] to-[#4edea3] shadow-lg shadow-[#4edea3]/30'
-                        : 'bg-[#4edea3]/30 hover:bg-[#4edea3]/60'
-                    }`}
-                    style={{ height: bar.height }}
-                  />
-                  <span className="text-xs text-[#86948a] font-medium">{bar.label}</span>
+      <div className="grid lg:grid-cols-2 gap-5">
+        <Panel title="Training volume" subtitle="Kg lifted per week (sets × reps × weight), last 8 weeks">
+          {!sessionsLoaded ? (
+            <div className="h-36 animate-pulse rounded-xl bg-[#111c2d]" />
+          ) : sessions.length === 0 ? (
+            <EmptyHint text="No workouts logged yet." action="Go to my plan" onClick={() => navigateTo('workout')} />
+          ) : (
+            <div className="flex items-end gap-2 h-40" role="img" aria-label={`Kg lifted per week: ${weeks.map((w) => Math.round(w.volume)).join(', ')}`}>
+              {weeks.map((w, i) => (
+                <div key={w.start} className="flex-1 flex flex-col items-center justify-end h-full gap-1" title={`Week of ${fmt(w.start)}: ${Math.round(w.volume).toLocaleString('en-IN')} kg in ${w.count} workouts`}>
+                  <span className="text-[9px] text-[#bbcabf] tabular-nums">{w.volume ? `${(w.volume / 1000).toFixed(1)}t` : ''}</span>
+                  <div className={`w-full rounded-t-md ${i === weeks.length - 1 ? 'bg-[#4edea3]' : 'bg-[#4edea3]/45'}`} style={{ height: w.volume ? `${Math.max(6, (w.volume / maxVolume) * 100)}%` : '2px' }} />
+                  <span className="text-[9px] text-[#86948a]">{fmt(w.start).split(' ')[0]}</span>
                 </div>
               ))}
             </div>
           )}
+        </Panel>
 
-          {activeMetricTab === 'calories' && (
-            <div className="flex items-end justify-between gap-3 h-full pt-8 px-2 z-10">
-              {[
-                { label: 'Mon', intake: '2,200', target: '2,250', height: '78%' },
-                { label: 'Tue', intake: '2,310', target: '2,250', height: '82%' },
-                { label: 'Wed', intake: '2,150', target: '2,250', height: '75%' },
-                { label: 'Thu', intake: '2,280', target: '2,250', height: '80%' },
-                { label: 'Fri', intake: '2,240', target: '2,250', height: '79%' },
-                { label: 'Sat', intake: '2,400', target: '2,250', height: '86%' },
-                { label: 'Sun', intake: '2,180', target: '2,250', height: '77%' },
-              ].map((day, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                  <span className="text-[10px] text-[#ffb3af] opacity-0 group-hover:opacity-100">
-                    {day.intake} kcal
-                  </span>
-                  <div
-                    className="w-full max-w-[32px] rounded-t-lg bg-gradient-to-t from-[#ffb3af]/40 to-[#ffb3af] transition-all"
-                    style={{ height: day.height }}
-                  />
-                  <span className="text-xs text-[#86948a]">{day.label}</span>
-                </div>
-              ))}
+        <Panel title="Muscles trained" subtitle="Working sets per muscle group, last 30 days">
+          {muscleSplit.length === 0 ? (
+            <EmptyHint text="This fills in after your first logged workout." />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {muscleSplit.map(([m, n]) => <Bar key={m} label={m} value={n} max={maxSets} text={`${n} sets`} />)}
             </div>
           )}
+        </Panel>
 
-          {activeMetricTab === 'recovery' && (
-            <div className="flex items-end justify-between gap-4 h-full pt-8 px-2 z-10">
-              {[
-                { label: 'Mon', sleep: '7.8h', score: 88, height: '88%' },
-                { label: 'Tue', sleep: '8.1h', score: 92, height: '92%' },
-                { label: 'Wed', sleep: '7.2h', score: 80, height: '80%' },
-                { label: 'Thu', sleep: '8.0h', score: 90, height: '90%' },
-                { label: 'Fri', sleep: '7.5h', score: 85, height: '85%' },
-                { label: 'Sat', sleep: '8.4h', score: 95, height: '95%' },
-                { label: 'Sun', sleep: '7.6h', score: 88, height: '88%' },
-              ].map((item, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                  <span className="text-[10px] text-[#9ddf2e] opacity-0 group-hover:opacity-100">
-                    {item.score}%
-                  </span>
-                  <div
-                    className="w-full max-w-[36px] rounded-t-lg bg-gradient-to-t from-[#9ddf2e]/40 to-[#9ddf2e] transition-all"
-                    style={{ height: item.height }}
-                  />
-                  <span className="text-xs text-[#86948a]">{item.label}</span>
-                </div>
-              ))}
+        <Panel title="Today's food" subtitle={eatenCount ? `From ${eatenCount} meal${eatenCount > 1 ? 's' : ''} you ticked as eaten` : 'Tick meals as eaten on the Nutrition page to see this'}>
+          <div className="flex flex-col gap-3">
+            <Bar label="Calories" value={consumedCalories} max={healthMetrics.dailyCalorieTarget} text={`${consumedCalories} / ${healthMetrics.dailyCalorieTarget} kcal`} />
+            <Bar label="Protein" value={consumedProtein} max={healthMetrics.proteinTarget} text={`${consumedProtein} / ${healthMetrics.proteinTarget} g`} tone="#9ddf2e" />
+            <Bar label="Carbs" value={consumedCarbs} max={healthMetrics.carbsTarget} text={`${consumedCarbs} / ${healthMetrics.carbsTarget} g`} tone="#9ecaff" />
+            <Bar label="Fats" value={consumedFats} max={healthMetrics.fatsTarget} text={`${consumedFats} / ${healthMetrics.fatsTarget} g`} tone="#ffb95f" />
+          </div>
+          <p className="text-[11px] text-[#86948a] mt-3">Targets come from your profile (Mifflin-St Jeor formula and your goal).</p>
+        </Panel>
+
+        <Panel title="Recovery & activity" subtitle="What you logged today">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-[#111c2d] rounded-xl p-3 border border-[#1f2a3c]">
+              <div className="text-[11px] text-[#86948a] font-semibold">Sleep</div>
+              {sleepLoggedToday ? (
+                <>
+                  <div className="font-headline text-xl font-bold text-[#d8e3fb]">{sleepLog.sleepHours}h {sleepLog.sleepMinutes}m</div>
+                  <div className="text-[11px] text-[#bbcabf]">{sleepLog.sleepQuality} · recovery {sleepLog.recoveryScore}%</div>
+                </>
+              ) : (
+                <div className="text-sm text-[#86948a] mt-1">Not logged today</div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Secondary Metrics Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Muscle Group Split Distribution */}
-        <div className="bg-[#111c2d] p-6 rounded-2xl border border-[#1f2a3c] shadow-xl flex flex-col justify-between">
-          <div>
-            <h3 className="font-headline text-lg font-bold text-[#d8e3fb] mb-1">
-              Muscle Group Frequency
-            </h3>
-            <p className="text-xs text-[#86948a] mb-4">Weekly direct training volume breakdown</p>
-
-            <div className="space-y-3">
-              {[
-                { muscle: 'Chest & Pecs', sets: '12 sets', percent: 85, color: '#4edea3' },
-                { muscle: 'Back & Lats', sets: '14 sets', percent: 92, color: '#98da27' },
-                { muscle: 'Quads & Glutes', sets: '10 sets', percent: 75, color: '#ffb3af' },
-                { muscle: 'Delts & Shoulders', sets: '10 sets', percent: 75, color: '#4edea3' },
-                { muscle: 'Arms (Bi/Tri)', sets: '8 sets', percent: 65, color: '#d8e3fb' },
-              ].map((m, idx) => (
-                <div key={idx} className="flex flex-col gap-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-[#d8e3fb]">{m.muscle}</span>
-                    <span className="text-[#86948a]">{m.sets}</span>
-                  </div>
-                  <div className="w-full bg-[#152031] h-2 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${m.percent}%`, backgroundColor: m.color }}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="bg-[#111c2d] rounded-xl p-3 border border-[#1f2a3c]">
+              <div className="text-[11px] text-[#86948a] font-semibold">Steps</div>
+              {stepsLog.currentSteps > 0 ? (
+                <>
+                  <div className="font-headline text-xl font-bold text-[#d8e3fb]">{stepsLog.currentSteps.toLocaleString('en-IN')}</div>
+                  <div className="text-[11px] text-[#bbcabf]">of {stepsLog.targetSteps.toLocaleString('en-IN')} · {stepsLog.distanceKm} km</div>
+                </>
+              ) : (
+                <div className="text-sm text-[#86948a] mt-1">Not logged today</div>
+              )}
             </div>
           </div>
-        </div>
-
-        {/* Macronutrient Distribution Donut / Proportions */}
-        <div className="bg-[#111c2d] p-6 rounded-2xl border border-[#1f2a3c] shadow-xl flex flex-col justify-between">
-          <div>
-            <h3 className="font-headline text-lg font-bold text-[#d8e3fb] mb-1">
-              Macro Distribution
-            </h3>
-            <p className="text-xs text-[#86948a] mb-4">Caloric contribution split</p>
-
-            <div className="flex items-center justify-center py-4">
-              <div className="relative w-36 h-36 rounded-full flex items-center justify-center bg-[#152031] border border-[#1f2a3c]">
-                <div className="flex flex-col items-center">
-                  <span className="font-headline text-xl font-bold text-[#d8e3fb]">
-                    {healthMetrics.dailyCalorieTarget}
-                  </span>
-                  <span className="text-[10px] text-[#86948a]">Target kcal</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-center text-xs mt-2">
-              <div className="bg-[#152031] p-2.5 rounded-xl border border-[#1f2a3c]">
-                <span className="block text-[10px] text-[#98da27] font-bold">PROTEIN</span>
-                <span className="font-bold text-[#d8e3fb]">{healthMetrics.proteinTarget}g</span>
-                <span className="block text-[10px] text-[#86948a]">30%</span>
-              </div>
-              <div className="bg-[#152031] p-2.5 rounded-xl border border-[#1f2a3c]">
-                <span className="block text-[10px] text-[#ffb3af] font-bold">CARBS</span>
-                <span className="font-bold text-[#d8e3fb]">{healthMetrics.carbsTarget}g</span>
-                <span className="block text-[10px] text-[#86948a]">45%</span>
-              </div>
-              <div className="bg-[#152031] p-2.5 rounded-xl border border-[#1f2a3c]">
-                <span className="block text-[10px] text-[#4edea3] font-bold">FATS</span>
-                <span className="font-bold text-[#d8e3fb]">{healthMetrics.fatsTarget}g</span>
-                <span className="block text-[10px] text-[#86948a]">25%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Consistency & Habit Adherence */}
-        <div className="bg-[#111c2d] p-6 rounded-2xl border border-[#1f2a3c] shadow-xl flex flex-col justify-between">
-          <div>
-            <h3 className="font-headline text-lg font-bold text-[#d8e3fb] mb-1">
-              Monthly Adherence
-            </h3>
-            <p className="text-xs text-[#86948a] mb-4">Habit consistency tracking</p>
-
-            <div className="space-y-4">
-              <div className="bg-[#152031] p-3 rounded-xl border border-[#1f2a3c] flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[#4edea3]">fitness_center</span>
-                  <div>
-                    <div className="text-xs font-bold text-[#d8e3fb]">Workout Sessions</div>
-                    <div className="text-[11px] text-[#86948a]">18 of 20 completed</div>
-                  </div>
-                </div>
-                <span className="font-headline text-sm font-bold text-[#4edea3]">90%</span>
-              </div>
-
-              <div className="bg-[#152031] p-3 rounded-xl border border-[#1f2a3c] flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[#4edea3]">water_drop</span>
-                  <div>
-                    <div className="text-xs font-bold text-[#d8e3fb]">Hydration Target</div>
-                    <div className="text-[11px] text-[#86948a]">26 of 28 days reached</div>
-                  </div>
-                </div>
-                <span className="font-headline text-sm font-bold text-[#4edea3]">93%</span>
-              </div>
-
-              <div className="bg-[#152031] p-3 rounded-xl border border-[#1f2a3c] flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[#ffb3af]">bedtime</span>
-                  <div>
-                    <div className="text-xs font-bold text-[#d8e3fb]">Sleep Consistency</div>
-                    <div className="text-[11px] text-[#86948a]">Avg 7h 48m / night</div>
-                  </div>
-                </div>
-                <span className="font-headline text-sm font-bold text-[#ffb3af]">87%</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          <button onClick={() => navigateTo('progress')} className="text-xs text-[#4edea3] hover:underline mt-3">Log sleep or steps on the Progress page →</button>
+        </Panel>
       </div>
     </div>
   );
 };
+
+const EmptyHint: React.FC<{ text: string; action?: string; onClick?: () => void }> = ({ text, action, onClick }) => (
+  <div className="h-36 flex flex-col items-center justify-center text-center gap-2">
+    <p className="text-sm text-[#86948a]">{text}</p>
+    {action && <button onClick={onClick} className="px-3 py-1.5 rounded-lg bg-[#4edea3] text-[#003824] text-xs font-bold">{action}</button>}
+  </div>
+);

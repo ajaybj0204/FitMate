@@ -466,7 +466,7 @@ export const INITIAL_MEALS: Meal[] = [
     description: 'Crisp whole fermented urad dal and brown rice dosa served with two organic hard-boiled eggs and fresh mint chutney.',
     recipe: 'Prepare fermented lentil and rice batter. Spread thin on a heated non-stick tava with 1 tsp ghee. Boil 2 eggs for 7.5 mins. Serve hot with coconut-coriander chutney.',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuADi_4K_FXqzG1MM_VJNUf7ADoGVBvmy7-Q45DKNnHMRQ0xWBeq5ClZWfpsfM8cq0bDoEe6ftU06WoBtOe9nb7BHVSPQRFUKNfCJRl4Tvv0noD1F_sWkUgTRiapokjF2oBNyfcGVHsAuUYQSlY5jVShQ4fVZG7BY7nxuiq_cxgieZJgKkEw5XGXWUTiOtHxUL0g-BS7EYHpDu0nqfF14Zg-xwU2sWwJR6hPD7bi3PVe0dNnuW-vd_bu8A',
-    completed: true,
+    completed: false,
   },
   {
     id: 'meal-2',
@@ -487,7 +487,7 @@ export const INITIAL_MEALS: Meal[] = [
     description: 'Aromatic basmati rice paired with protein-dense yellow dal tadka, seasonal sautéed greens, and juicy tender grilled chicken breast.',
     recipe: 'Steam fragrant aged basmati rice. Temper yellow moong dal with cumin seeds, garlic, and turmeric. Pan-sear chicken breast marinated in ginger-garlic paste, curd, and garam masala.',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBdXBwvLI8zwoj8ejbueXNc4RY4ht20Zf2obRuQk1550A_SXLKD4meMshMSL_DQ2a3VsN1NfQEByGlC11DDnlGrhYq_jctV-V-cel2Ac52GloKRGUMuRFYaDIN8j4WPpnsZ4hwkuywWtl4EJZcFliBH4P9zFSZ-o8f75SkQnN5mZ30eWV61cLEn5HFEfD0UDL_YsPtd1jR6ZhcfvXFXnNPDmbVyLJDD71pX-EcC2q1iYTRjbkyc-eMaWw',
-    completed: true,
+    completed: false,
   },
   {
     id: 'meal-3',
@@ -508,7 +508,7 @@ export const INITIAL_MEALS: Meal[] = [
     description: 'Probiotic-rich thick fresh curd or hung Greek yogurt topped with raw California almonds, walnuts, and ripe sliced papaya.',
     recipe: 'Whisk fresh chilled curd until creamy. Fold in roasted unsalted almond slivers and walnut halves. Top with chilled diced fresh papaya and a pinch of ground cinnamon.',
     imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBVo0u9zQwxgpS_bnk34xaR_D6qyKyt8SWxTAmoGwOGAyjBWiLLzfb4sQnABYMUJFZjCNINLHqEmwqaoLS4KjmJYEubImk-ViGMNs-NRWFdHye32fSv05WLdKBiZltCqhJiywzfKczMskwvreBmON8i9dHu7D6KDpZO2QGGJT7CG1g21cRSrmd_61nD1Xu-Utly7jt6aQjEVQ2Q9Khga1CRqotnve1K1Lvlw0bpxgyJU6bCv03gsHmgiw',
-    completed: true,
+    completed: false,
   },
   {
     id: 'meal-4',
@@ -617,52 +617,8 @@ export const INITIAL_MEALS: Meal[] = [
   },
 ];
 
-export const INITIAL_PROGRESS_ENTRIES: ProgressEntry[] = [
-  {
-    id: 'prog-1',
-    date: '2026-09-07',
-    weightKg: 82.5,
-    waistInches: 34.0,
-    chestInches: 41.5,
-    armsInches: 14.4,
-    thighsInches: 22.1,
-    bodyFatPercent: 18.5,
-    notes: 'Baseline check-in at start of Hypertrophy cycle. Feeling motivated!',
-  },
-  {
-    id: 'prog-2',
-    date: '2026-09-14',
-    weightKg: 81.3,
-    waistInches: 33.5,
-    chestInches: 41.7,
-    armsInches: 14.7,
-    thighsInches: 22.1,
-    bodyFatPercent: 17.9,
-    notes: 'Hit all 5 workouts this week. Water intake consistently around 3.2L.',
-  },
-  {
-    id: 'prog-3',
-    date: '2026-09-21',
-    weightKg: 80.2,
-    waistInches: 33.0,
-    chestInches: 41.9,
-    armsInches: 15.0,
-    thighsInches: 22.1,
-    bodyFatPercent: 17.2,
-    notes: 'Bench press strength jumped 5kg. Visual separation in delts.',
-  },
-  {
-    id: 'prog-4',
-    date: '2026-09-28',
-    weightKg: 79.1,
-    waistInches: 32.5,
-    chestInches: 42.0,
-    armsInches: 15.2,
-    thighsInches: 22.1,
-    bodyFatPercent: 16.5,
-    notes: 'Down 3.4kg total with arms up 0.8 inches. Muscle retention is optimal.',
-  },
-];
+/** Body check-ins start empty: users add their own. */
+export const INITIAL_PROGRESS_ENTRIES: ProgressEntry[] = [];
 
 export const EDUCATIONAL_TOPICS: EducationalTopic[] = [
   {
@@ -911,7 +867,7 @@ export const INITIAL_DAILY_PLAN: DailyPlanItem[] = [
     title: 'Wakeup Hydration & Mobility',
     category: 'hydration',
     detail: 'Drink 500ml warm water with lemon + 5 minutes light thoracic spine mobility.',
-    completed: true,
+    completed: false,
   },
   {
     id: 'plan-2',
@@ -919,7 +875,7 @@ export const INITIAL_DAILY_PLAN: DailyPlanItem[] = [
     title: 'Breakfast Fuel',
     category: 'meal',
     detail: 'Power Dosa & Eggs (28g protein, 450 kcal).',
-    completed: true,
+    completed: false,
   },
   {
     id: 'plan-3',
@@ -927,7 +883,7 @@ export const INITIAL_DAILY_PLAN: DailyPlanItem[] = [
     title: 'Lunch Performance Feast',
     category: 'meal',
     detail: 'Balanced Thali Bowl with chicken/dal (54g protein, 680 kcal).',
-    completed: true,
+    completed: false,
   },
   {
     id: 'plan-4',
@@ -979,112 +935,25 @@ export const INITIAL_DAILY_PLAN: DailyPlanItem[] = [
   },
 ];
 
-export const INITIAL_GROCERY_ITEMS: GroceryItem[] = [
-  {
-    id: 'groc-1',
-    name: 'Soya Chunks (Fortune / Nutrela)',
-    quantity: '1 kg packet',
-    category: 'Protein & Dairy',
-    estimatedCostInr: 120,
-    checked: true,
-  },
-  {
-    id: 'groc-2',
-    name: 'Fresh Low-Fat Paneer',
-    quantity: '500g',
-    category: 'Protein & Dairy',
-    estimatedCostInr: 180,
-    checked: true,
-  },
-  {
-    id: 'groc-3',
-    name: 'Fresh Farm Eggs (Tray)',
-    quantity: '30 eggs',
-    category: 'Protein & Dairy',
-    estimatedCostInr: 195,
-    checked: false,
-  },
-  {
-    id: 'groc-4',
-    name: 'Fresh Chicken Breast',
-    quantity: '1 kg',
-    category: 'Protein & Dairy',
-    estimatedCostInr: 260,
-    checked: false,
-  },
-  {
-    id: 'groc-5',
-    name: 'Yellow Moong Dal (Lentils)',
-    quantity: '1 kg',
-    category: 'Grains & Pulses',
-    estimatedCostInr: 130,
-    checked: true,
-  },
-  {
-    id: 'groc-6',
-    name: 'Whole Green Moong (for Sprouts)',
-    quantity: '500g',
-    category: 'Grains & Pulses',
-    estimatedCostInr: 70,
-    checked: true,
-  },
-  {
-    id: 'groc-7',
-    name: 'Brown Basmati Rice',
-    quantity: '2 kg',
-    category: 'Grains & Pulses',
-    estimatedCostInr: 190,
-    checked: false,
-  },
-  {
-    id: 'groc-8',
-    name: 'Whole Wheat Atta (Multigrain)',
-    quantity: '5 kg',
-    category: 'Grains & Pulses',
-    estimatedCostInr: 240,
-    checked: true,
-  },
-  {
-    id: 'groc-9',
-    name: 'Fresh Palak (Spinach) & Methi',
-    quantity: '4 bunches',
-    category: 'Produce',
-    estimatedCostInr: 60,
-    checked: false,
-  },
-  {
-    id: 'groc-10',
-    name: 'Papaya & Bananas',
-    quantity: '1.5 kg',
-    category: 'Produce',
-    estimatedCostInr: 90,
-    checked: false,
-  },
-  {
-    id: 'groc-11',
-    name: 'Raw California Almonds',
-    quantity: '250g',
-    category: 'Pantry & Spices',
-    estimatedCostInr: 220,
-    checked: false,
-  },
-];
+/** Grocery list starts empty: filled from meals the user picks. */
+export const INITIAL_GROCERY_ITEMS: GroceryItem[] = [];
 
+/** Nothing logged yet (date empty = not logged). */
 export const INITIAL_SLEEP_LOG: SleepLog = {
-  date: 'Today',
-  sleepHours: 7,
-  sleepMinutes: 45,
-  sleepQuality: 'Deep',
-  recoveryScore: 88,
-  restingHeartRate: 54,
+  date: '',
+  sleepHours: 0,
+  sleepMinutes: 0,
+  sleepQuality: 'Fair',
+  recoveryScore: 0,
+  restingHeartRate: 0,
 };
 
 export const INITIAL_STEPS_LOG: StepsLog = {
-  date: 'Today',
-  currentSteps: 8420,
+  date: '',
+  currentSteps: 0,
   targetSteps: 10000,
-  distanceKm: 6.4,
-  caloriesBurned: 380,
+  distanceKm: 0,
+  caloriesBurned: 0,
 };
 
 export const INITIAL_ACHIEVEMENTS: AchievementBadge[] = [
@@ -1093,8 +962,8 @@ export const INITIAL_ACHIEVEMENTS: AchievementBadge[] = [
     title: 'First Step Champion',
     description: 'Completed onboarding and logged first workout session.',
     icon: 'flag',
-    unlocked: true,
-    progress: 1,
+    unlocked: false,
+    progress: 0,
     maxProgress: 1,
     category: 'Milestone',
   },
@@ -1103,8 +972,8 @@ export const INITIAL_ACHIEVEMENTS: AchievementBadge[] = [
     title: 'Streak Titan (14 Days)',
     description: 'Maintained 14 consecutive active workout & nutrition days.',
     icon: 'local_fire_department',
-    unlocked: true,
-    progress: 14,
+    unlocked: false,
+    progress: 0,
     maxProgress: 14,
     category: 'Consistency',
   },
@@ -1113,8 +982,8 @@ export const INITIAL_ACHIEVEMENTS: AchievementBadge[] = [
     title: 'Hydration Hero',
     description: 'Drank at least 3.0 liters of water daily for 7 consecutive days.',
     icon: 'water_drop',
-    unlocked: true,
-    progress: 7,
+    unlocked: false,
+    progress: 0,
     maxProgress: 7,
     category: 'Habits',
   },
@@ -1123,8 +992,8 @@ export const INITIAL_ACHIEVEMENTS: AchievementBadge[] = [
     title: 'Century Lifter (100 Sets)',
     description: 'Completed 100 working sets with progressive overload.',
     icon: 'fitness_center',
-    unlocked: true,
-    progress: 108,
+    unlocked: false,
+    progress: 0,
     maxProgress: 100,
     category: 'Strength',
   },
@@ -1134,7 +1003,7 @@ export const INITIAL_ACHIEVEMENTS: AchievementBadge[] = [
     description: 'Hit 100% daily protein target for 10 distinct days.',
     icon: 'nutrition',
     unlocked: false,
-    progress: 8,
+    progress: 0,
     maxProgress: 10,
     category: 'Nutrition',
   },
@@ -1144,7 +1013,7 @@ export const INITIAL_ACHIEVEMENTS: AchievementBadge[] = [
     description: 'Increased weight or reps on all primary compound exercises.',
     icon: 'trending_up',
     unlocked: false,
-    progress: 3,
+    progress: 0,
     maxProgress: 5,
     category: 'Strength',
   },

@@ -16,7 +16,7 @@ export const OnboardingSection: React.FC = () => {
       setStep(prev => prev + 1);
     } else {
       // Complete Onboarding!
-      updateProfile(formData);
+      updateProfile({ ...formData, memberSince: formData.memberSince || new Date().toISOString().slice(0, 10) });
       showToast('Blueprint generated successfully! Welcome to FITORA 🎉', 'success');
       navigateTo('dashboard');
     }

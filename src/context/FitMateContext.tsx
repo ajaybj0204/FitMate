@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { saveSession, subscribeSessions } from '../lib/cloudStore';
+import { prepareLocalData } from '../lib/localData';
 import {
   bestSet,
   computeStreak,
@@ -198,6 +199,9 @@ interface FitMateContextType {
 const FitMateContext = createContext<FitMateContextType | undefined>(undefined);
 
 export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Remove old sample data and reset per-day counters before anything reads saved state
+  prepareLocalData();
+
   // Navigation & History Stack
   const [currentSection, setCurrentSection] = useState<NavigationSection>(() => {
   try {
@@ -325,7 +329,7 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const saved = localStorage.getItem(STORAGE_KEYS.HYDRATION);
       if (saved) return Number(saved);
     } catch {}
-    return 1800; // Realistic default
+    return 0;
   });
 
   const waterGoalMl = Math.round(healthMetrics.waterTargetLiters * 1000);
@@ -362,6 +366,7 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setStepsLog(prev => {
       const updated: StepsLog = {
         ...prev,
+        date: localDate(),
         currentSteps: newSteps,
         distanceKm: Number((newSteps * 0.00076).toFixed(1)),
         caloriesBurned: Math.round(newSteps * 0.045),
@@ -389,12 +394,12 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const finalScore = Math.max(30, Math.min(100, baseScore + qualityBonus));
 
     const updated: SleepLog = {
-      date: 'Today',
+      date: localDate(),
       sleepHours: hours,
       sleepMinutes: minutes,
       sleepQuality: quality,
       recoveryScore: finalScore,
-      restingHeartRate: 54,
+      restingHeartRate: 0,
     };
     setSleepLog(updated);
     try {
@@ -559,7 +564,7 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setProgressEntries(prev => [...prev, newEntry]);
     updateProfile({ weightKg: entry.weightKg });
-    showToast('Progress entry saved and trajectory updated! 📈');
+    showToast('Check-in saved. 📈');
   };
 
   // Workout Schedule & Customization
@@ -632,7 +637,26 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isFavoriteExercise = (id: string) => savedExerciseIds.includes(id);
 
-  const { uid, authLoading } = useAuth();
+  const { uid, user, authLoading } = useAuth();
+
+  // Signed in but no profile yet (new account): ask for their details, starting from their Google name
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let hasProfile = false;
+    try {
+      hasProfile = Boolean(localStorage.getItem(STORAGE_KEYS.PROFILE));
+    } catch {}
+    if (hasProfile) return;
+    setUserProfile(prev => ({
+      ...prev,
+      name: prev.name === INITIAL_USER_PROFILE.name ? user.displayName || prev.name : prev.name,
+      email: prev.email || user.email || '',
+    }));
+    if (currentSection !== 'gym' && currentSection !== 'onboarding') {
+      setCurrentSection('onboarding');
+      showToast('Welcome! Tell FITORA a little about you to set up your plan.', 'info');
+    }
+  }, [authLoading, user]);
 
   const [selectedScheduleDayId, setSelectedScheduleDayId] = useState<string>(() => {
     const id = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
@@ -985,17 +1009,31 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Achievements
+  // Badges are earned from real logged data only
   const achievements = useMemo(() => {
+    const totalSets = sessions.reduce((n, s) => n + s.setsCount, 0);
+    // Exercises whose best set improved since the first time they were logged
+    const improved = new Set<string>();
+    const firstBest = new Map<string, number>();
+    for (const s of [...sessions].sort((x, y) => x.startedAt - y.startedAt)) {
+      for (const e of s.exercises) {
+        const b = bestSet(e.sets);
+        if (!b) continue;
+        const v = b.weightKg * (1 + b.reps / 30) + (b.weightKg === 0 ? b.reps : 0);
+        if (!firstBest.has(e.key)) firstBest.set(e.key, v);
+        else if (v > (firstBest.get(e.key) || 0)) improved.add(e.key);
+      }
+    }
     return INITIAL_ACHIEVEMENTS.map(ach => {
-      if (ach.id === 'ach-2') {
-        return { ...ach, progress: Math.min(ach.maxProgress, streakDays), unlocked: streakDays >= 14 };
-      }
-      if (ach.id === 'ach-1') {
-        return { ...ach, unlocked: sessions.length >= 1 };
-      }
-      return ach;
+      const earn = (progress: number) => ({ ...ach, progress: Math.min(ach.maxProgress, progress), unlocked: progress >= ach.maxProgress });
+      if (ach.id === 'ach-1') return earn(sessions.length >= 1 ? 1 : 0);
+      if (ach.id === 'ach-2') return earn(streakDays);
+      if (ach.id === 'ach-4') return earn(totalSets);
+      if (ach.id === 'ach-6') return earn(improved.size);
+      // Water and protein history are not tracked day by day yet, so these stay at 0 for now
+      return { ...ach, progress: 0, unlocked: false };
     });
-  }, [streakDays, sessions.length]);
+  }, [streakDays, sessions]);
 
   // AI Assistant Chat state
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);

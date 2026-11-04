@@ -3,6 +3,7 @@ import { useFitMate } from '../context/FitMateContext';
 import { SUPPORTED_LANGUAGES } from '../i18n/translations';
 import { PWAInstallButton } from './PWAInstallButton';
 import { AccountButton } from './AccountButton';
+import { localDate, todayDayId } from '../lib/progression';
 
 export const Header: React.FC<{ onMobileMenuClick?: () => void }> = ({ onMobileMenuClick }) => {
   const {
@@ -20,6 +21,10 @@ export const Header: React.FC<{ onMobileMenuClick?: () => void }> = ({ onMobileM
     setIsRemindersModalOpen,
     hydrationMl,
     addWaterMl,
+    waterGoalMl,
+    workoutSchedule,
+    sessions,
+    missedDays,
   } = useFitMate();
 
   const [profileImage, setProfileImage] = useState<string>(() => {
@@ -50,31 +55,34 @@ export const Header: React.FC<{ onMobileMenuClick?: () => void }> = ({ onMobileM
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
 
+  // Reminders built from today's plan and what was actually logged (nothing invented)
+  const todayPlan = workoutSchedule.find(d => d.id === todayDayId());
+  const trainedToday = sessions.some(s => s.date === localDate());
   const notifications = [
-    {
-      id: 1,
-      title: 'Workout Scheduled Today',
-      desc: 'Monday Push (Chest & Triceps) is ready for you.',
-      time: '15m ago',
-      unread: true,
-      icon: 'fitness_center',
-    },
+    todayPlan && !todayPlan.isRest && todayPlan.exercises.length > 0
+      ? {
+          id: 1,
+          title: trainedToday ? 'Workout done today ✅' : 'Workout scheduled today',
+          desc: trainedToday ? 'Nice work. Recovery and protein next.' : `${todayPlan.dayName} ${todayPlan.splitName} (${todayPlan.focus}) is ready for you.`,
+          time: 'Today',
+          unread: !trainedToday,
+          icon: 'fitness_center',
+        }
+      : { id: 1, title: 'Rest day today', desc: 'Light walking and good sleep help you recover.', time: 'Today', unread: false, icon: 'bedtime' },
     {
       id: 2,
-      title: 'Hydration Target Milestone',
-      desc: `Logged ${(hydrationMl / 1000).toFixed(1)}L water today! Consistent cellular hydration.`,
-      time: '2h ago',
-      unread: false,
+      title: 'Water today',
+      desc: hydrationMl > 0 ? `${(hydrationMl / 1000).toFixed(1)} L of ${(waterGoalMl / 1000).toFixed(1)} L logged.` : 'No water logged yet today. Tap +250ml when you drink.',
+      time: 'Today',
+      unread: hydrationMl === 0,
       icon: 'water_drop',
     },
-    {
-      id: 3,
-      title: `Streak Record: ${userProfile.streakDays} Days 🔥`,
-      desc: 'You are in the top 5% of consistent athletes this month.',
-      time: 'Yesterday',
-      unread: false,
-      icon: 'local_fire_department',
-    },
+    ...(missedDays.length
+      ? [{ id: 3, title: 'Missed workout this week', desc: 'Do it today or skip it on the Workout page.', time: 'This week', unread: true, icon: 'event_busy' }]
+      : []),
+    ...(userProfile.streakDays > 0
+      ? [{ id: 4, title: `${userProfile.streakDays}-day streak 🔥`, desc: 'Counting workouts and planned rest days.', time: 'Today', unread: false, icon: 'local_fire_department' }]
+      : []),
   ];
 
   const currentLangObj = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0];
