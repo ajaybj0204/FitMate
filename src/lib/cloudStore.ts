@@ -18,6 +18,10 @@ import {
 import { db } from './firebase';
 import type { AccountDoc, WorkoutSession } from '../types/cloud';
 
+const listenFailed = (what: string) => (e: { code?: string; message?: string }) =>
+  console.error(`FITORA: live update failed for ${what}:`, e?.code, e?.message);
+
+
 const LOCAL_SESSIONS = 'fitora_sessions_v1';
 const SYNC_META = 'fitora_sync_meta_v1';
 const SESSIONS_EVENT = 'fitora-local-sessions';
@@ -60,7 +64,7 @@ export function subscribeSessions(uid: string | null, cb: (list: WorkoutSession[
     return onSnapshot(
       q,
       (snap) => cb(snap.docs.map((d) => d.data() as WorkoutSession)),
-      () => cb([]),
+      (e) => { listenFailed('sessions')(e); cb([]); },
     );
   }
   const emit = () => cb(readLocalSessions().sort((a, b) => b.startedAt - a.startedAt));
@@ -109,7 +113,7 @@ export async function loadOrCreateAccount(user: { uid: string; displayName: stri
 
 export function subscribeAccount(uid: string, cb: (a: AccountDoc | null) => void): () => void {
   if (!db) return () => {};
-  return onSnapshot(doc(db, 'users', uid), (s) => cb(s.exists() ? (s.data() as AccountDoc) : null), () => cb(null));
+  return onSnapshot(doc(db, 'users', uid), (s) => cb(s.exists() ? (s.data() as AccountDoc) : null), (e) => { listenFailed('account')(e); cb(null); });
 }
 
 export async function updateAccount(uid: string, patch: Partial<AccountDoc>) {

@@ -27,6 +27,10 @@ import { db } from './firebase';
 import type { Gym, GymCheckin, GymMember, GymPayment, GymPlan, PaymentMethod } from '../types/cloud';
 import { localDate } from './progression';
 
+const listenFailed = (what: string) => (e: { code?: string; message?: string }) =>
+  console.error(`FITORA: live update failed for ${what}:`, e?.code, e?.message);
+
+
 const need = () => {
   if (!db) throw new Error('Cloud is not set up.');
   return db;
@@ -90,7 +94,7 @@ export async function createGym(ownerUid: string, input: { name: string; city: s
 }
 
 export function subscribeGym(gymId: string, cb: (g: Gym | null) => void) {
-  return onSnapshot(doc(need(), 'gyms', gymId), (s) => cb(s.exists() ? (s.data() as Gym) : null), () => cb(null));
+  return onSnapshot(doc(need(), 'gyms', gymId), (s) => cb(s.exists() ? (s.data() as Gym) : null), (e) => { listenFailed('gym')(e); cb(null); });
 }
 
 export async function getGym(gymId: string): Promise<Gym | null> {
@@ -105,7 +109,7 @@ export async function updateGym(gymId: string, patch: Partial<Gym>) {
 // ── Members ──────────────────────────────────────────────────────────────────
 
 export function subscribeMembers(gymId: string, cb: (list: GymMember[]) => void) {
-  return onSnapshot(collection(need(), 'gyms', gymId, 'members'), (s) => cb(s.docs.map((d) => d.data() as GymMember)), () => cb([]));
+  return onSnapshot(collection(need(), 'gyms', gymId, 'members'), (s) => cb(s.docs.map((d) => d.data() as GymMember)), (e) => { listenFailed('members')(e); cb([]); });
 }
 
 export async function addMember(
@@ -171,7 +175,7 @@ export async function deleteMember(gymId: string, member: GymMember) {
 
 export function subscribePayments(gymId: string, cb: (list: GymPayment[]) => void) {
   const q = query(collection(need(), 'gyms', gymId, 'payments'), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (s) => cb(s.docs.map((d) => d.data() as GymPayment)), () => cb([]));
+  return onSnapshot(q, (s) => cb(s.docs.map((d) => d.data() as GymPayment)), (e) => { listenFailed('payments')(e); cb([]); });
 }
 
 /** Records a fee payment and moves the member's due date forward. */
@@ -209,7 +213,7 @@ export async function deletePayment(gymId: string, paymentId: string) {
 
 export function subscribeCheckinsSince(gymId: string, sinceDate: string, cb: (list: GymCheckin[]) => void) {
   const q = query(collection(need(), 'gyms', gymId, 'checkins'), where('date', '>=', sinceDate), orderBy('date', 'desc'));
-  return onSnapshot(q, (s) => cb(s.docs.map((d) => d.data() as GymCheckin)), () => cb([]));
+  return onSnapshot(q, (s) => cb(s.docs.map((d) => d.data() as GymCheckin)), (e) => { listenFailed('check-ins')(e); cb([]); });
 }
 
 /** Owner marks someone present at the desk. */
@@ -265,7 +269,7 @@ export async function claimInvite(uid: string, gymId: string, inviteCode: string
 }
 
 export function subscribeMyMembership(gymId: string, memberId: string, cb: (m: GymMember | null) => void) {
-  return onSnapshot(doc(need(), 'gyms', gymId, 'members', memberId), (s) => cb(s.exists() ? (s.data() as GymMember) : null), () => cb(null));
+  return onSnapshot(doc(need(), 'gyms', gymId, 'members', memberId), (s) => cb(s.exists() ? (s.data() as GymMember) : null), (e) => { listenFailed('my membership')(e); cb(null); });
 }
 
 /** Member scans the reception QR → records today's visit (once per day). */
