@@ -20,7 +20,8 @@ interface Res {
   setHeader: (k: string, v: string) => void;
 }
 
-const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+// Newest first; on 404 (retired) or 429/5xx (busy) the next one is tried
+const MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest'];
 const PER_USER_PER_HOUR = 40;
 const hits = new Map<string, number[]>(); // best effort (per warm instance)
 
