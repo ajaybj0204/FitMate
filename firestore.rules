@@ -17,8 +17,8 @@ service cloud.firestore {
       allow read, write: if isMe(uid);
 
       match /sessions/{sessionId} {
-        allow read, write: if isMe(uid)
-          && (request.method == 'delete' || request.resource.data.exercises is list);
+        allow read, delete: if isMe(uid);
+        allow create, update: if isMe(uid) && request.resource.data.exercises is list;
       }
       match /private/{docId} {
         allow read, write: if isMe(uid);

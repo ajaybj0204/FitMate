@@ -201,7 +201,15 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Navigation & History Stack
   const [currentSection, setCurrentSection] = useState<NavigationSection>(() => {
   try {
-    if (window.location.hash.startsWith('#join/') || window.location.hash.startsWith('#checkin/')) return 'gym';
+    const hash = window.location.hash;
+    if (hash.startsWith('#join/') || hash.startsWith('#checkin/')) return 'gym';
+    // Open the screen named in the address (e.g. a shared …/#gym or …/#exercise-library link)
+    const named = hash.slice(1) as NavigationSection;
+    const OPENABLE: NavigationSection[] = [
+      'dashboard', 'my-health', 'workout', 'exercise-library', 'daily-plan', 'nutrition',
+      'analytics', 'progress', 'learn', 'profile', 'gym',
+    ];
+    if (OPENABLE.includes(named)) return named;
     return localStorage.getItem(STORAGE_KEYS.PROFILE) ? 'dashboard' : 'landing';
   } catch {
     return 'landing';

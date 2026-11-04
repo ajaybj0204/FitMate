@@ -31,6 +31,32 @@ const listenFailed = (what: string) => (e: { code?: string; message?: string }) 
   console.error(`FITORA: live update failed for ${what}:`, e?.code, e?.message);
 
 
+/**
+ * Live query that retries when refused. Right after a gym is created, the first listen can
+ * reach the server before the new gym is visible to the security rules; a retry fixes it.
+ */
+function liveQuery<T>(what: string, start: (onData: (v: T) => void, onError: (e: { code?: string; message?: string }) => void) => () => void, cb: (v: T) => void, empty: T) {
+  let stop: (() => void) | null = null;
+  let stopped = false;
+  let tries = 0;
+  const run = () => {
+    stop = start(cb, (e) => {
+      if (!stopped && e?.code === 'permission-denied' && tries < 4) {
+        tries++;
+        window.setTimeout(() => !stopped && run(), 1200 * tries);
+        return;
+      }
+      listenFailed(what)(e);
+      cb(empty);
+    });
+  };
+  run();
+  return () => {
+    stopped = true;
+    stop?.();
+  };
+}
+
 const need = () => {
   if (!db) throw new Error('Cloud is not set up.');
   return db;
@@ -109,7 +135,7 @@ export async function updateGym(gymId: string, patch: Partial<Gym>) {
 // ── Members ──────────────────────────────────────────────────────────────────
 
 export function subscribeMembers(gymId: string, cb: (list: GymMember[]) => void) {
-  return onSnapshot(collection(need(), 'gyms', gymId, 'members'), (s) => cb(s.docs.map((d) => d.data() as GymMember)), (e) => { listenFailed('members')(e); cb([]); });
+  return liveQuery<GymMember[]>('members', (ok, bad) => onSnapshot(collection(need(), 'gyms', gymId, 'members'), (s) => ok(s.docs.map((d) => d.data() as GymMember)), bad), cb, []);
 }
 
 export async function addMember(
@@ -175,7 +201,7 @@ export async function deleteMember(gymId: string, member: GymMember) {
 
 export function subscribePayments(gymId: string, cb: (list: GymPayment[]) => void) {
   const q = query(collection(need(), 'gyms', gymId, 'payments'), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (s) => cb(s.docs.map((d) => d.data() as GymPayment)), (e) => { listenFailed('payments')(e); cb([]); });
+  return liveQuery<GymPayment[]>('payments', (ok, bad) => onSnapshot(q, (s) => ok(s.docs.map((d) => d.data() as GymPayment)), bad), cb, []);
 }
 
 /** Records a fee payment and moves the member's due date forward. */
@@ -213,7 +239,7 @@ export async function deletePayment(gymId: string, paymentId: string) {
 
 export function subscribeCheckinsSince(gymId: string, sinceDate: string, cb: (list: GymCheckin[]) => void) {
   const q = query(collection(need(), 'gyms', gymId, 'checkins'), where('date', '>=', sinceDate), orderBy('date', 'desc'));
-  return onSnapshot(q, (s) => cb(s.docs.map((d) => d.data() as GymCheckin)), (e) => { listenFailed('check-ins')(e); cb([]); });
+  return liveQuery<GymCheckin[]>('check-ins', (ok, bad) => onSnapshot(q, (s) => ok(s.docs.map((d) => d.data() as GymCheckin)), bad), cb, []);
 }
 
 /** Owner marks someone present at the desk. */
