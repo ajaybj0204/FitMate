@@ -577,6 +577,8 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SCHEDULE);
       if (saved) return JSON.parse(saved);
+      // Save the starting plan too, so it syncs and the reminder server knows the training days
+      localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(WORKOUT_DAYS));
     } catch {}
     return WORKOUT_DAYS;
   });

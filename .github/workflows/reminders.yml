@@ -1,0 +1,21 @@
+# Runs FITORA's reminder check every hour (workout, water and gym fee reminders).
+# Needs the repository secret CRON_SECRET (same value as the CRON_SECRET env var in Vercel).
+name: FITORA reminders
+
+on:
+  schedule:
+    - cron: '2 * * * *'
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send due reminders
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET is not set; skipping."; exit 0; fi
+          curl -fsS -X POST https://fit-mate-coral.vercel.app/api/reminders \
+            -H "x-cron-secret: $CRON_SECRET" -H "Content-Type: application/json" -d '{}'

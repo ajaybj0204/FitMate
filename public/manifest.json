@@ -2,7 +2,7 @@
   "id": "/",
   "name": "FITORA - Intelligent Fitness & Wellness Companion",
   "short_name": "FITORA",
-  "description": "FITORA: Understand your body. Train smarter. Live better. Multilingual fitness companion with workouts, Indian nutrition, and analytics.",
+  "description": "FITORA: workout logger with smart progression, 873-exercise photo library, Indian nutrition and gym management.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,16 +10,22 @@
   "theme_color": "#081425",
   "icons": [
     {
-      "src": "https://lh3.googleusercontent.com/aida-public/AB6AXuD5qefloapqs6OpQdjHAKGt9VjTICuAN5kXtI0BJM7ENK4W-xQmuGmftLk0RL3QHx7kbDENREWwPMyroOuMRNRL5jQ0kj0nj3FfmFN1eys5icCugKtKa-pz4GzccD_A4CJwc2JVgLdmEtk7T7O6CCre5bhtA6NS79WOII89nkwROV5Aqy3A6CuuDtpIVwpDCWdojp2r_0ST81zX9j-BUIdr-9Zf3LhAdNThH8gdtV8WULglSNv3sTclPg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://lh3.googleusercontent.com/aida-public/AB6AXuD5qefloapqs6OpQdjHAKGt9VjTICuAN5kXtI0BJM7ENK4W-xQmuGmftLk0RL3QHx7kbDENREWwPMyroOuMRNRL5jQ0kj0nj3FfmFN1eys5icCugKtKa-pz4GzccD_A4CJwc2JVgLdmEtk7T7O6CCre5bhtA6NS79WOII89nkwROV5Aqy3A6CuuDtpIVwpDCWdojp2r_0ST81zX9j-BUIdr-9Zf3LhAdNThH8gdtV8WULglSNv3sTclPg",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

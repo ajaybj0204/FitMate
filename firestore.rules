@@ -25,6 +25,11 @@ service cloud.firestore {
       }
     }
 
+    // ── Reminder devices & choices (the server reads these with admin access) ──
+    match /pushSubscriptions/{uid} {
+      allow read, write: if isMe(uid);
+    }
+
     // ── Gyms ─────────────────────────────────────────────────────────────────
     match /gyms/{gymId} {
       function gym() { return get(/databases/$(database)/documents/gyms/$(gymId)).data; }
