@@ -18,6 +18,7 @@ const readPendingAction = (): PendingAction => {
 
 export const GymSection: React.FC = () => {
   const { cloudEnabled, user, account, authLoading, signIn, authError } = useAuth();
+  const { t } = useFitMate();
   const [pending, setPending] = useState<PendingAction>(readPendingAction);
   const [setupOpen, setSetupOpen] = useState(false);
 
@@ -82,9 +83,9 @@ export const GymSection: React.FC = () => {
       ) : (
         <Card className="py-8 px-6 text-center">
           <span className="material-symbols-outlined text-[44px] text-[#4edea3]">fitness_center</span>
-          <h2 className="font-headline text-xl font-bold text-[#d8e3fb] mt-2">Connect your gym</h2>
+          <h2 className="font-headline text-xl font-bold text-[#d8e3fb] mt-2">{t('g_connect', "Connect your gym")}</h2>
           <p className="text-sm text-[#bbcabf] mt-1 max-w-lg mx-auto">
-            Ask your gym to add you in FITORA. They'll send you a personal link on WhatsApp. Open it on this phone and your membership appears here.
+            {t('g_connectDesc', "Ask your gym to add you in FITORA. They'll send you a personal link on WhatsApp. Open it on this phone and your membership appears here.")}
           </p>
         </Card>
       )}
@@ -227,6 +228,7 @@ const PendingActionCard: React.FC<{
 // ── Member's view of their gym ───────────────────────────────────────────────
 
 const MemberGym: React.FC<{ gymId: string; memberId: string; uid: string }> = ({ gymId, memberId, uid }) => {
+  const { t } = useFitMate();
   const [gym, setGym] = useState<Gym | null>(null);
   const [member, setMember] = useState<GymMember | null>(null);
   const [visits, setVisits] = useState<GymCheckin[]>([]);
@@ -248,23 +250,23 @@ const MemberGym: React.FC<{ gymId: string; memberId: string; uid: string }> = ({
   return (
     <div className="flex flex-col gap-4">
       <div className="bg-gradient-to-br from-[#152031] to-[#10251d] rounded-2xl border border-[#1f2a3c] p-5 sm:p-6">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-[#4edea3]">My gym</div>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-[#4edea3]">{t('g_myGym', "My gym")}</div>
         <h1 className="font-headline text-2xl font-extrabold text-[#d8e3fb]">{gym.name}</h1>
         <p className="text-xs text-[#86948a]">{gym.city}{gym.phone ? ` · ${gym.phone}` : ''}</p>
       </div>
       <div className="grid sm:grid-cols-3 gap-3">
         <Card>
-          <div className={labelCls}>Membership</div>
+          <div className={labelCls}>{t('g_membership', "Membership")}</div>
           <div className="font-headline text-lg font-bold text-[#d8e3fb] mt-1">{plan?.name || 'Plan'}{plan ? ` · ${inr(plan.priceInr)}` : ''}</div>
           <div className="mt-1.5"><FeeBadge member={member} /></div>
         </Card>
         <Card>
-          <div className={labelCls}>Paid till</div>
+          <div className={labelCls}>{t('g_paidTill', "Paid till")}</div>
           <div className={`font-headline text-lg font-bold mt-1 ${d < 0 ? 'text-[#ffb4ab]' : d <= 7 ? 'text-[#ffb95f]' : 'text-[#d8e3fb]'}`}>{fmtDate(member.dueDate)}</div>
           <div className="text-[11px] text-[#86948a] mt-1">{d < 0 ? `${-d} days overdue. Please pay at the desk.` : d === 0 ? 'Due today' : `${d} days left`}</div>
         </Card>
         <Card>
-          <div className={labelCls}>Visits this month</div>
+          <div className={labelCls}>{t('g_visits', "Visits this month")}</div>
           <div className="font-headline text-lg font-bold text-[#4edea3] mt-1">{thisMonth}</div>
           <div className="text-[11px] text-[#86948a] mt-1">{today ? 'Checked in today ✅' : 'Not checked in today'}</div>
         </Card>
@@ -272,8 +274,8 @@ const MemberGym: React.FC<{ gymId: string; memberId: string; uid: string }> = ({
       <Card className="flex items-start gap-3">
         <span className="material-symbols-outlined text-[28px] text-[#4edea3]">qr_code_scanner</span>
         <div>
-          <h3 className="font-bold text-[#d8e3fb]">How to check in</h3>
-          <p className="text-sm text-[#bbcabf]">When you arrive, open your phone camera and scan the FITORA QR code at reception. That's it.</p>
+          <h3 className="font-bold text-[#d8e3fb]">{t('g_howCheckin', "How to check in")}</h3>
+          <p className="text-sm text-[#bbcabf]">{t('g_howCheckinDesc', "When you arrive, open your phone camera and scan the FITORA QR code at reception. That's it.")}</p>
         </div>
       </Card>
       {visits.length > 0 && (

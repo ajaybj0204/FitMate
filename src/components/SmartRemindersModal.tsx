@@ -17,7 +17,7 @@ const hourLabel = (h: number) => `${((h + 11) % 12) + 1}:00 ${h < 12 ? 'am' : 'p
 
 /** Reminder settings: real phone notifications sent by FITORA's server. */
 export const SmartRemindersModal: React.FC = () => {
-  const { isRemindersModalOpen, setIsRemindersModalOpen, showToast } = useFitMate();
+  const { isRemindersModalOpen, setIsRemindersModalOpen, showToast, t } = useFitMate();
   const { user, signIn, account } = useAuth();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_PREFS);
   const [enabled, setEnabled] = useState(false);
@@ -117,8 +117,8 @@ export const SmartRemindersModal: React.FC = () => {
               <span className="material-symbols-outlined text-[22px]">alarm</span>
             </div>
             <div>
-              <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">Reminders</h3>
-              <p className="text-xs text-[#86948a]">Notifications on this phone or computer, even when FITORA is closed</p>
+              <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">{t('r_title', "Reminders")}</h3>
+              <p className="text-xs text-[#86948a]">{t('r_sub', "Notifications on this phone or computer, even when FITORA is closed")}</p>
             </div>
           </div>
           <button onClick={close} aria-label="Close" className="text-[#86948a] hover:text-[#d8e3fb] p-1.5 rounded-lg hover:bg-[#1f2a3c]">
@@ -129,15 +129,15 @@ export const SmartRemindersModal: React.FC = () => {
         {!user ? (
           <div className="py-8 text-center">
             <p className="text-sm text-[#bbcabf]">Reminders are linked to your account, so they know your plan and what you've logged.</p>
-            <button onClick={signIn} className="mt-4 px-4 py-2.5 rounded-xl bg-[#4edea3] text-[#003824] text-sm font-bold">Sign in with Google</button>
+            <button onClick={signIn} className="mt-4 px-4 py-2.5 rounded-xl bg-[#4edea3] text-[#003824] text-sm font-bold">{t('signInGoogle', "Sign in with Google")}</button>
           </div>
         ) : (
           <>
             <div className="divide-y divide-[#1f2a3c]/70 my-2">
               <Row
                 icon="fitness_center"
-                title="Workout reminder"
-                desc="On training days, if you haven't logged today's workout yet."
+                title={t('r_workout', "Workout reminder")}
+                desc={t('r_workoutDesc', "On training days, if you haven't logged today's workout yet.")}
                 on={prefs.workout.on}
                 onToggle={() => update({ ...prefs, workout: { ...prefs.workout, on: !prefs.workout.on } })}
               >
@@ -154,15 +154,15 @@ export const SmartRemindersModal: React.FC = () => {
               </Row>
               <Row
                 icon="water_drop"
-                title="Water reminders"
-                desc="At 11 am, 3 pm and 7 pm, only if you're behind on today's water."
+                title={t('r_water', "Water reminders")}
+                desc={t('r_waterDesc', "At 11 am, 3 pm and 7 pm, only if you're behind on today's water.")}
                 on={prefs.water.on}
                 onToggle={() => update({ ...prefs, water: { on: !prefs.water.on } })}
               />
               {account?.membership && (
                 <Row
                   icon="receipt_long"
-                  title="Gym fee due"
+                  title={t('r_fee', "Gym fee due")}
                   desc={`3 days before your ${account.membership.gymName} fee is due, and on the day.`}
                   on={prefs.fees.on}
                   onToggle={() => update({ ...prefs, fees: { on: !prefs.fees.on } })}
@@ -180,16 +180,16 @@ export const SmartRemindersModal: React.FC = () => {
               </p>
             ) : enabled ? (
               <div className="flex items-center justify-between gap-3 bg-[#10251d] border border-[#4edea3]/30 rounded-xl p-3">
-                <span className="text-xs text-[#4edea3] flex items-center gap-1.5"><span className="material-symbols-outlined text-[18px]">notifications_active</span>Reminders are on for this device</span>
+                <span className="text-xs text-[#4edea3] flex items-center gap-1.5"><span className="material-symbols-outlined text-[18px]">notifications_active</span>{t('r_on', "Reminders are on for this device")}</span>
                 <span className="flex gap-3">
-                  <button onClick={sendTest} disabled={busy} className="text-xs text-[#4edea3] hover:text-white underline">Send a test</button>
-                  <button onClick={turnOff} disabled={busy} className="text-xs text-[#bbcabf] hover:text-white underline">Turn off</button>
+                  <button onClick={sendTest} disabled={busy} className="text-xs text-[#4edea3] hover:text-white underline">{t('r_test', "Send a test")}</button>
+                  <button onClick={turnOff} disabled={busy} className="text-xs text-[#bbcabf] hover:text-white underline">{t('r_off', "Turn off")}</button>
                 </span>
               </div>
             ) : (
               <button onClick={turnOn} disabled={busy} className="w-full py-3 rounded-xl bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined text-[20px]">notifications</span>
-                {busy ? 'Turning on…' : 'Turn on reminders on this device'}
+                {busy ? 'Turning on…' : t('r_turnOn', "Turn on reminders on this device")}
               </button>
             )}
             {error && <p className="text-xs text-[#ffb4ab] mt-2">{error}</p>}

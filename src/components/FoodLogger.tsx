@@ -16,7 +16,7 @@ const guessMealType = (): Meal['mealType'] => {
 
 /** "Type what you ate" → AI estimate of calories and macros → add to today. */
 export const FoodLogger: React.FC = () => {
-  const { addCustomMeal, userProfile } = useFitMate();
+  const { addCustomMeal, userProfile, t } = useFitMate();
   const { user, cloudEnabled, signIn } = useAuth();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,10 +65,10 @@ export const FoodLogger: React.FC = () => {
     <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-5 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <span className="material-symbols-outlined text-[#4edea3]">edit_note</span>
-        <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">Log what you ate</h3>
+        <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">{t('f_title', "Log what you ate")}</h3>
         <span className="text-[10px] font-bold uppercase tracking-wider bg-[#4edea3]/15 text-[#4edea3] px-2 py-0.5 rounded-full">AI estimate</span>
       </div>
-      <p className="text-xs text-[#86948a] -mt-1">Type it the way you'd say it. Indian home food and portions are understood.</p>
+      <p className="text-xs text-[#86948a] -mt-1">{t('f_hint', "Type it the way you'd say it. Indian home food and portions are understood.")}</p>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, 500))}
@@ -85,7 +85,7 @@ export const FoodLogger: React.FC = () => {
         ) : (
           <button onClick={estimate} disabled={busy || text.trim().length < 3} className="px-4 py-2 rounded-xl bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] text-xs font-bold disabled:opacity-40 flex items-center gap-1.5">
             <span className={`material-symbols-outlined text-[16px] ${busy ? 'animate-spin' : ''}`}>{busy ? 'progress_activity' : 'calculate'}</span>
-            {busy ? 'Estimating…' : 'Estimate'}
+            {busy ? 'Estimating…' : t('f_estimate', "Estimate")}
           </button>
         )}
       </div>
@@ -105,7 +105,7 @@ export const FoodLogger: React.FC = () => {
                 </tr>
               ))}
               <tr className="border-t border-[#2a3a52] font-bold text-[#4edea3]">
-                <td className="py-1.5">Total</td>
+                <td className="py-1.5">{t('f_total', "Total")}</td>
                 <td className="py-1.5 text-right tabular-nums">{result.totals.calories}</td>
                 <td className="py-1.5 text-right tabular-nums">{result.totals.protein} g</td>
               </tr>
@@ -115,8 +115,8 @@ export const FoodLogger: React.FC = () => {
             Carbs {result.totals.carbs} g · Fats {result.totals.fats} g. Estimates can be off by 20% or more, mostly because of oil and ghee.{result.note ? ` ${result.note}` : ''}
           </p>
           <div className="flex gap-2 mt-3">
-            <button onClick={add} className="px-4 py-2 rounded-xl bg-[#4edea3] text-[#003824] text-xs font-bold">Add to today</button>
-            <button onClick={() => setResult(null)} className="px-4 py-2 rounded-xl bg-[#111c2d] text-[#d8e3fb] text-xs font-semibold border border-[#1f2a3c]">Discard</button>
+            <button onClick={add} className="px-4 py-2 rounded-xl bg-[#4edea3] text-[#003824] text-xs font-bold">{t('f_add', "Add to today")}</button>
+            <button onClick={() => setResult(null)} className="px-4 py-2 rounded-xl bg-[#111c2d] text-[#d8e3fb] text-xs font-semibold border border-[#1f2a3c]">{t('f_discard', "Discard")}</button>
           </div>
         </div>
       )}

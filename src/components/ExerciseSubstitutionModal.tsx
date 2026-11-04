@@ -42,7 +42,7 @@ export const ExerciseSubstitutionModal: React.FC<ExerciseSubstitutionModalProps>
   onClose,
   mode = 'workout',
 }) => {
-  const { substituteExercise, swapExerciseForToday, userProfile } = useFitMate();
+  const { substituteExercise, swapExerciseForToday, userProfile, t } = useFitMate();
   const [db, setDb] = useState<DbExercise[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [equipment, setEquipment] = useState<SwapEquipment>(userProfile.workoutLocation === 'Home Workout' ? 'body only' : 'any');
@@ -85,7 +85,7 @@ export const ExerciseSubstitutionModal: React.FC<ExerciseSubstitutionModalProps>
             </div>
             <div>
               <h3 className="font-headline text-lg sm:text-xl font-bold text-[#d8e3fb]">
-                {mode === 'workout' ? 'Equipment busy? Swap it' : 'Swap exercise'}
+                {mode === 'workout' ? t('s_title', 'Equipment busy? Swap it') : 'Swap exercise'}
               </h3>
               <p className="text-xs text-[#86948a]">
                 Alternatives for <strong className="text-[#bbcabf]">{exercise.name}</strong> that train the same muscle
@@ -100,7 +100,7 @@ export const ExerciseSubstitutionModal: React.FC<ExerciseSubstitutionModalProps>
 
         {/* Equipment filter */}
         <div className="mt-4">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-[#86948a] mb-2">What's free right now?</div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-[#86948a] mb-2">{t('s_free', "What's free right now?")}</div>
           <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
             {EQUIPMENT_CHIPS.map((c) => (
               <button
@@ -148,7 +148,7 @@ export const ExerciseSubstitutionModal: React.FC<ExerciseSubstitutionModalProps>
           {mode === 'workout' ? (
             <label className="flex items-center gap-2 text-xs text-[#bbcabf] cursor-pointer select-none">
               <input type="checkbox" checked={permanent} onChange={(e) => setPermanent(e.target.checked)} className="accent-[#4edea3] w-4 h-4" />
-              Also change my weekly plan (otherwise just today)
+              {t('s_alsoPlan', "Also change my weekly plan (otherwise just today)")}
             </label>
           ) : (
             <span className="text-xs text-[#86948a]">This changes your weekly plan.</span>

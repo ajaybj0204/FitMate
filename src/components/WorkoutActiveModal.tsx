@@ -31,6 +31,7 @@ export const WorkoutActiveModal: React.FC = () => {
     navigateTo,
     currentSuggestion,
     isQuickWorkout,
+    t,
   } = useFitMate();
 
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
@@ -121,7 +122,7 @@ export const WorkoutActiveModal: React.FC = () => {
                     title="Equipment busy? Swap this exercise"
                   >
                     <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
-                    <span className="hidden sm:inline">Equipment busy?</span>
+                    <span className="hidden sm:inline">{t('m_equipBusy', "Equipment busy?")}</span>
                   </button>
                   <button
                     onClick={closeWorkoutMode}
@@ -251,16 +252,16 @@ export const WorkoutActiveModal: React.FC = () => {
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#86948a]">Last time</div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#86948a]">{t('m_lastTime', "Last time")}</div>
                     <div className="text-sm font-bold text-[#d8e3fb] truncate">
-                      {currentSuggestion.last ? describeSets(currentSuggestion.last.sets) : 'Not logged yet'}
+                      {currentSuggestion.last ? describeSets(currentSuggestion.last.sets) : t('m_notLoggedYet', "Not logged yet")}
                     </div>
                     {currentSuggestion.lastDate && <div className="text-[10px] text-[#86948a]">{currentSuggestion.lastDate}</div>}
                   </div>
                 </div>
                 <div className="flex-1 sm:border-l sm:border-[#1f2a3c] sm:pl-4">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-[#4edea3]">
-                    Today's target: {currentSuggestion.weightKg > 0 ? `${currentSuggestion.weightKg} kg × ` : ''}{currentSuggestion.reps} reps
+                    {t('m_todayTarget', "Today's target")}: {currentSuggestion.weightKg > 0 ? `${currentSuggestion.weightKg} kg × ` : ''}{currentSuggestion.reps} reps
                   </div>
                   <p className="text-xs text-[#bbcabf] mt-0.5 leading-relaxed">{currentSuggestion.note}</p>
                 </div>
@@ -278,7 +279,7 @@ export const WorkoutActiveModal: React.FC = () => {
                   {warmups.length > 0 && (
                     <div className="flex-1 bg-[#0c1421] rounded-2xl border border-[#1f2a3c] px-3.5 py-2.5">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-[#ffb95f] flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">local_fire_department</span>Warm up first (not logged)
+                        <span className="material-symbols-outlined text-[14px]">local_fire_department</span>{t('m_warmup', "Warm up first (not logged)")}
                       </div>
                       <div className="text-xs text-[#d8e3fb] mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                         {warmups.map((w, i) => <span key={i} className="tabular-nums">{w.weightKg} kg × {w.reps}</span>)}
@@ -288,7 +289,7 @@ export const WorkoutActiveModal: React.FC = () => {
                   {plates && (
                     <div className="flex-1 bg-[#0c1421] rounded-2xl border border-[#1f2a3c] px-3.5 py-2.5">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-[#9ecaff] flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">fitness_center</span>Plates each side (20 kg bar)
+                        <span className="material-symbols-outlined text-[14px]">fitness_center</span>{t('m_plates', "Plates each side (20 kg bar)")}
                       </div>
                       <div className="text-xs text-[#d8e3fb] mt-1 tabular-nums">{plates.length ? plates.join(' + ') + ' kg' : 'Empty bar'}</div>
                     </div>

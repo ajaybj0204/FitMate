@@ -9,7 +9,7 @@ const LEVELS: UserProfile['experience'][] = ['Beginner', 'Intermediate', 'Advanc
 
 /** "Build my plan": a weekly plan from days per week, gym/home, goal and experience. */
 export const PlanBuilderModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { userProfile, updateProfile, replaceSchedule } = useFitMate();
+  const { userProfile, updateProfile, replaceSchedule, t } = useFitMate();
   const [db, setDb] = useState<DbExercise[] | null>(null);
   const [days, setDays] = useState(Math.min(6, Math.max(2, userProfile.workoutDaysPerWeek || 3)));
   const [location, setLocation] = useState<UserProfile['workoutLocation']>(userProfile.workoutLocation);
@@ -30,7 +30,7 @@ export const PlanBuilderModal: React.FC<{ onClose: () => void }> = ({ onClose })
       <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] w-full max-w-2xl p-5 sm:p-6 my-auto shadow-2xl">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <h3 className="font-headline text-xl font-bold text-[#d8e3fb]">Build my weekly plan</h3>
+            <h3 className="font-headline text-xl font-bold text-[#d8e3fb]">{t('pb_title', "Build my weekly plan")}</h3>
             <p className="text-xs text-[#86948a] mt-0.5">Pick what fits your week. Your workout history and suggestions are kept.</p>
           </div>
           <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg text-[#86948a] hover:text-white hover:bg-[#1f2a3c]">
@@ -39,16 +39,16 @@ export const PlanBuilderModal: React.FC<{ onClose: () => void }> = ({ onClose })
         </div>
 
         <div className="flex flex-col gap-3.5">
-          <Row label="Days per week">
+          <Row label={t('pb_days', "Days per week")}>
             {[2, 3, 4, 5, 6].map((d) => <button key={d} className={chip(days === d)} onClick={() => setDays(d)}>{d}</button>)}
           </Row>
-          <Row label="Where">
+          <Row label={t('pb_where', "Where")}>
             {(['Full Gym', 'Home Workout'] as const).map((l) => <button key={l} className={chip(location === l)} onClick={() => setLocation(l)}>{l === 'Full Gym' ? 'Gym' : 'Home (dumbbells)'}</button>)}
           </Row>
-          <Row label="Goal">
+          <Row label={t('pb_goal', "Goal")}>
             {GOALS.map((g) => <button key={g} className={chip(goal === g)} onClick={() => setGoal(g)}>{g}</button>)}
           </Row>
-          <Row label="Experience">
+          <Row label={t('pb_exp', "Experience")}>
             {LEVELS.map((x) => <button key={x} className={chip(experience === x)} onClick={() => setExperience(x)}>{x}</button>)}
           </Row>
         </div>
@@ -70,7 +70,7 @@ export const PlanBuilderModal: React.FC<{ onClose: () => void }> = ({ onClose })
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-4">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl bg-[#111c2d] text-[#d8e3fb] text-sm font-semibold border border-[#1f2a3c]">Keep current plan</button>
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl bg-[#111c2d] text-[#d8e3fb] text-sm font-semibold border border-[#1f2a3c]">{t('pb_keep', "Keep current plan")}</button>
           <button
             disabled={!plan}
             onClick={() => {
@@ -81,7 +81,7 @@ export const PlanBuilderModal: React.FC<{ onClose: () => void }> = ({ onClose })
             }}
             className="px-4 py-2.5 rounded-xl bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] text-sm font-bold disabled:opacity-40"
           >
-            Use this plan
+            {t('pb_use', "Use this plan")}
           </button>
         </div>
       </div>

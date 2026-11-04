@@ -496,3 +496,9 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     resetFilters: 'ഫിൽട്ടറുകൾ മാറ്റുക',
   },
 };
+
+// Translations for the screens added in the full-stack update
+import { NEW_SCREEN_TRANSLATIONS } from './newScreens';
+for (const lang of Object.keys(NEW_SCREEN_TRANSLATIONS) as (keyof typeof NEW_SCREEN_TRANSLATIONS)[]) {
+  Object.assign(TRANSLATIONS[lang], NEW_SCREEN_TRANSLATIONS[lang]);
+}

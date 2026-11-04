@@ -19,6 +19,7 @@ export const WorkoutSection: React.FC = () => {
     skipMissedDay,
     suggestionFor,
     sessions,
+    t,
   } = useFitMate();
 
   const [inspectingExercise, setInspectingExercise] = useState<Exercise | null>(null);
@@ -52,10 +53,10 @@ export const WorkoutSection: React.FC = () => {
             </span>
           </div>
           <h1 className="font-headline text-2xl sm:text-3xl font-bold text-[#d8e3fb]">
-            Your Weekly Plan
+            {t('w_weeklyPlan', "Your Weekly Plan")}
           </h1>
           <p className="text-xs sm:text-sm text-[#bbcabf] max-w-xl leading-relaxed">
-            Your weekly plan. Log every set and FITORA remembers your numbers and tells you what to lift next time.
+            {t('w_planDesc', "Your weekly plan. Log every set and FITORA remembers your numbers and tells you what to lift next time.")}
           </p>
         </div>
 
@@ -80,7 +81,7 @@ export const WorkoutSection: React.FC = () => {
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] text-xs font-bold"
           >
             <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
-            Build my plan
+            {t('w_buildPlan', "Build my plan")}
           </button>
         </div>
       </div>
@@ -93,10 +94,10 @@ export const WorkoutSection: React.FC = () => {
             <span className="material-symbols-outlined text-[#ffb95f] text-[24px] shrink-0">event_busy</span>
             <div>
               <h3 className="font-headline text-base font-bold text-[#ffddb8]">
-                You missed {missedDays.length === 1 ? 'a workout' : `${missedDays.length} workouts`} this week
+                {missedDays.length === 1 ? t('w_missedTitle', 'You missed a workout this week') : t('w_missedMany', 'You missed {n} workouts this week').replace('{n}', String(missedDays.length))}
               </h3>
               <p className="text-xs text-[#d8c3ad] mt-0.5">
-                Life happens. Do it today instead, or skip it so your week moves on. No guilt either way.
+                {t('w_missedDesc', "Life happens. Do it today instead, or skip it so your week moves on. No guilt either way.")}
               </p>
             </div>
           </div>
@@ -111,19 +112,19 @@ export const WorkoutSection: React.FC = () => {
                     onClick={() => startWorkout(day.id)}
                     className="px-3 py-1.5 rounded-lg bg-[#ffb95f] text-[#2a1700] text-xs font-bold hover:brightness-110"
                   >
-                    Do it today
+                    {t('w_doToday', "Do it today")}
                   </button>
                   <button
                     onClick={() => startWorkout(day.id, { quick: true })}
                     className="px-3 py-1.5 rounded-lg bg-[#1f2a3c] text-[#ffddb8] text-xs font-semibold hover:bg-[#2b3a52]"
                   >
-                    Quick 30 min
+                    {t('w_quick30', "Quick 30 min")}
                   </button>
                   <button
                     onClick={() => skipMissedDay(date, day.id)}
                     className="px-3 py-1.5 rounded-lg text-[#d8c3ad] text-xs font-semibold hover:text-white"
                   >
-                    Skip
+                    {t('w_skip', "Skip")}
                   </button>
                 </div>
               </div>
@@ -155,7 +156,7 @@ export const WorkoutSection: React.FC = () => {
                 <span className={`text-[10px] uppercase tracking-wider flex items-center justify-between gap-1 ${isSelected ? 'opacity-90' : 'text-[#86948a]'}`}>
                   <span>
                     {day.dayName}
-                    {day.id === todayId && <span className={`ml-1 font-extrabold ${isSelected ? '' : 'text-[#4edea3]'}`}>· Today</span>}
+                    {day.id === todayId && <span className={`ml-1 font-extrabold ${isSelected ? '' : 'text-[#4edea3]'}`}>· {t('w_today', "Today")}</span>}
                   </span>
                   {doneThisWeek.has(day.id) && (
                     <span className="material-symbols-outlined text-[16px]" title="Done this week">check_circle</span>
@@ -202,7 +203,7 @@ export const WorkoutSection: React.FC = () => {
                 title="Short on time: the 3 main exercises, one set fewer each"
               >
                 <span className="material-symbols-outlined text-[18px]">bolt</span>
-                <span>Quick 30 min</span>
+                <span>{t('w_quick30', "Quick 30 min")}</span>
               </button>
             )}
             {!activeDay.isRest && activeDay.exercises.length > 0 && (
@@ -308,13 +309,13 @@ export const WorkoutSection: React.FC = () => {
                   {(() => {
                     const s = suggestionFor(exercise);
                     if (!s.last) {
-                      return <div className="text-[11px] text-[#86948a] -mt-1">Not logged yet. Your first session sets the baseline.</div>;
+                      return <div className="text-[11px] text-[#86948a] -mt-1">{t('w_notLogged', "Not logged yet. Your first session sets the baseline.")}</div>;
                     }
                     return (
                       <div className="-mt-1 text-[11px] leading-relaxed">
-                        <span className="text-[#86948a]">Last: </span>
+                        <span className="text-[#86948a]">{t('w_last', "Last")}: </span>
                         <span className="text-[#bbcabf] font-semibold">{describeSets(s.last.sets)}</span>
-                        <span className="text-[#86948a]"> → Next: </span>
+                        <span className="text-[#86948a]"> → {t('w_next', "Next")}: </span>
                         <span className={`font-bold ${s.kind === 'increase' ? 'text-[#4edea3]' : s.kind === 'deload' ? 'text-[#ffb4ab]' : 'text-[#d8e3fb]'}`}>
                           {s.weightKg > 0 ? `${s.weightKg} kg × ${s.reps}` : `${s.reps} reps`}
                           {s.kind === 'increase' ? ' ↑' : ''}

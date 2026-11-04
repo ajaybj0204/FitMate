@@ -400,7 +400,7 @@ export const DashboardSection: React.FC = () => {
           {/* This week's workouts (from real logged sessions) */}
           <div className="bg-[#111c2d] p-6 rounded-2xl flex flex-col justify-between border border-[#1f2a3c] shadow-xl">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">This Week</h3>
+              <h3 className="font-headline text-lg font-bold text-[#d8e3fb]">{t('d_thisWeek', "This Week")}</h3>
               <span className="text-xs text-[#4edea3] font-bold">
                 {weekDays.filter(d => d.minutes > 0).length} / {userProfile.workoutDaysPerWeek} workouts
               </span>

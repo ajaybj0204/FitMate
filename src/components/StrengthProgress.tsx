@@ -19,7 +19,7 @@ const mondayOf = (dateStr: string) => {
 };
 
 export const StrengthProgress: React.FC = () => {
-  const { sessions, sessionsLoaded, navigateTo, startWorkout, selectedScheduleDayId } = useFitMate();
+  const { sessions, sessionsLoaded, navigateTo, startWorkout, selectedScheduleDayId, t } = useFitMate();
   const { cloudEnabled, user, signIn } = useAuth();
 
   // Exercises with history, most-logged first
@@ -89,12 +89,12 @@ export const StrengthProgress: React.FC = () => {
     return (
       <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-6 sm:p-8 text-center">
         <span className="material-symbols-outlined text-[44px] text-[#4edea3]">show_chart</span>
-        <h2 className="font-headline text-xl font-bold text-[#d8e3fb] mt-2">Your strength chart starts with your first workout</h2>
+        <h2 className="font-headline text-xl font-bold text-[#d8e3fb] mt-2">{t('sp_empty', "Your strength chart starts with your first workout")}</h2>
         <p className="text-sm text-[#bbcabf] mt-1 max-w-lg mx-auto">
           Log your sets during a workout. FITORA charts how your strength grows for each exercise, counts your workouts per week and keeps your personal records.
         </p>
         <div className="flex flex-wrap gap-2 justify-center mt-4">
-          <button onClick={() => startWorkout(selectedScheduleDayId)} className="px-4 py-2.5 rounded-xl bg-[#4edea3] text-[#003824] text-sm font-bold hover:bg-[#6ffbbe]">Start a workout</button>
+          <button onClick={() => startWorkout(selectedScheduleDayId)} className="px-4 py-2.5 rounded-xl bg-[#4edea3] text-[#003824] text-sm font-bold hover:bg-[#6ffbbe]">{t('sp_start', "Start a workout")}</button>
           <button onClick={() => navigateTo('workout')} className="px-4 py-2.5 rounded-xl bg-[#111c2d] text-[#d8e3fb] text-sm font-semibold border border-[#1f2a3c]">See my plan</button>
         </div>
         {cloudEnabled && !user && (
@@ -136,7 +136,7 @@ export const StrengthProgress: React.FC = () => {
         <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
-              <h3 className="font-headline font-bold text-[#d8e3fb]">Strength over time</h3>
+              <h3 className="font-headline font-bold text-[#d8e3fb]">{t('sp_strength', "Strength over time")}</h3>
               <p className="text-[11px] text-[#86948a]">Estimated 1-rep max from your best set each session</p>
             </div>
             {exercises.length > 0 && (
@@ -166,7 +166,7 @@ export const StrengthProgress: React.FC = () => {
 
         {/* Weekly consistency */}
         <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-4 sm:p-5">
-          <h3 className="font-headline font-bold text-[#d8e3fb]">Workouts per week</h3>
+          <h3 className="font-headline font-bold text-[#d8e3fb]">{t('sp_perWeek', "Workouts per week")}</h3>
           <p className="text-[11px] text-[#86948a] mb-3">Last 8 weeks</p>
           <div className="flex items-end gap-2 h-36" role="img" aria-label={`Workouts per week: ${weeks.map((w) => w.count).join(', ')}`}>
             {weeks.map((w, i) => (
@@ -186,7 +186,7 @@ export const StrengthProgress: React.FC = () => {
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-4 sm:p-5">
-          <h3 className="font-headline font-bold text-[#d8e3fb] mb-2">Personal records</h3>
+          <h3 className="font-headline font-bold text-[#d8e3fb] mb-2">{t('sp_records', "Personal records")}</h3>
           {records.map((r) => (
             <div key={r.name} className="flex justify-between gap-3 py-2 border-b border-[#1f2a3c] last:border-0 text-sm">
               <span className="text-[#d8e3fb] truncate">{r.name}</span>
@@ -196,7 +196,7 @@ export const StrengthProgress: React.FC = () => {
           {!records.length && <p className="text-sm text-[#86948a]">Records appear once you log weighted sets.</p>}
         </div>
         <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-4 sm:p-5">
-          <h3 className="font-headline font-bold text-[#d8e3fb] mb-2">Recent workouts</h3>
+          <h3 className="font-headline font-bold text-[#d8e3fb] mb-2">{t('sp_recent', "Recent workouts")}</h3>
           {sessions.slice(0, 6).map((s: WorkoutSession) => (
             <details key={s.id} className="py-2 border-b border-[#1f2a3c] last:border-0 group">
               <summary className="flex justify-between gap-3 text-sm cursor-pointer list-none">

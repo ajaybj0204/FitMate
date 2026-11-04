@@ -21,7 +21,7 @@ const MEASURES: { key: keyof Pick<ProgressEntry, 'waistInches' | 'chestInches' |
 ];
 
 export const ProgressSection: React.FC = () => {
-  const { progressEntries, addProgressEntry, userProfile, achievements, logSteps, logSleep, stepsLog, sleepLog } = useFitMate();
+  const { progressEntries, addProgressEntry, userProfile, achievements, logSteps, logSleep, stepsLog, sleepLog, t } = useFitMate();
   const [modal, setModal] = useState<'checkin' | 'steps' | 'sleep' | null>(null);
 
   // Real check-ins only (weight > 0), oldest first
@@ -39,36 +39,36 @@ export const ProgressSection: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="text-[#4edea3] text-xs font-bold uppercase tracking-wider mb-1">Progress</div>
-          <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb]">Your progress</h1>
-          <p className="text-xs sm:text-sm text-[#bbcabf] mt-1">Everything here comes from what you log.</p>
+          <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb]">{t('p_title', "Your progress")}</h1>
+          <p className="text-xs sm:text-sm text-[#bbcabf] mt-1">{t('p_sub', "Everything here comes from what you log.")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setModal('steps')} className="px-3.5 py-2.5 rounded-xl bg-[#111c2d] border border-[#1f2a3c] text-[#d8e3fb] text-xs font-semibold flex items-center gap-1.5 hover:bg-[#1f2a3c]">
             <span className="material-symbols-outlined text-[18px] text-[#9ecaff]">directions_walk</span>
-            {stepsLog.currentSteps > 0 ? `${stepsLog.currentSteps.toLocaleString('en-IN')} steps` : 'Log steps'}
+            {stepsLog.currentSteps > 0 ? `${stepsLog.currentSteps.toLocaleString('en-IN')} steps` : t('p_logSteps', "Log steps")}
           </button>
           <button onClick={() => setModal('sleep')} className="px-3.5 py-2.5 rounded-xl bg-[#111c2d] border border-[#1f2a3c] text-[#d8e3fb] text-xs font-semibold flex items-center gap-1.5 hover:bg-[#1f2a3c]">
             <span className="material-symbols-outlined text-[18px] text-[#c3b5ff]">bedtime</span>
-            {sleepLog.date === today ? `Slept ${sleepLog.sleepHours}h ${sleepLog.sleepMinutes}m` : 'Log sleep'}
+            {sleepLog.date === today ? `Slept ${sleepLog.sleepHours}h ${sleepLog.sleepMinutes}m` : t('p_logSleep', "Log sleep")}
           </button>
           <button onClick={() => setModal('checkin')} className="bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">add_chart</span>
-            Log body check-in
+            {t('p_checkin', "Log body check-in")}
           </button>
         </div>
       </div>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-headline text-xl font-bold text-[#d8e3fb]">Workout progress</h2>
+        <h2 className="font-headline text-xl font-bold text-[#d8e3fb]">{t('p_workoutProgress', "Workout progress")}</h2>
         <StrengthProgress />
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-headline text-xl font-bold text-[#d8e3fb]">Body check-ins</h2>
+        <h2 className="font-headline text-xl font-bold text-[#d8e3fb]">{t('p_body', "Body check-ins")}</h2>
         {entries.length === 0 ? (
           <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-6 sm:p-8 text-center">
             <span className="material-symbols-outlined text-[44px] text-[#4edea3]">monitor_weight</span>
-            <h3 className="font-headline text-lg font-bold text-[#d8e3fb] mt-2">No check-ins yet</h3>
+            <h3 className="font-headline text-lg font-bold text-[#d8e3fb] mt-2">{t('p_noCheckins', "No check-ins yet")}</h3>
             <p className="text-sm text-[#bbcabf] mt-1 max-w-md mx-auto">
               Log your weight (and measurements if you like) once a week, same time of day. FITORA charts the trend so you can see real change.
             </p>
@@ -78,7 +78,7 @@ export const ProgressSection: React.FC = () => {
           <div className="grid lg:grid-cols-[1fr_1.6fr] gap-4">
             <div className="flex flex-col gap-3">
               <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-5">
-                <div className={labelCls}>Latest weight</div>
+                <div className={labelCls}>{t('p_latestWeight', "Latest weight")}</div>
                 <div className="font-headline text-4xl font-bold text-[#d8e3fb] tabular-nums mt-1">{last.weightKg}<span className="text-base text-[#86948a] font-medium"> kg</span></div>
                 <div className="text-xs text-[#86948a] mt-1">{fmt(last.date)}</div>
                 {change !== null && (
@@ -109,7 +109,7 @@ export const ProgressSection: React.FC = () => {
               </div>
             </div>
             <div className="bg-[#152031] rounded-2xl border border-[#1f2a3c] p-5">
-              <h3 className="font-headline font-bold text-[#d8e3fb]">Weight trend</h3>
+              <h3 className="font-headline font-bold text-[#d8e3fb]">{t('p_weightTrend', "Weight trend")}</h3>
               {entries.length < 2 ? (
                 <p className="text-sm text-[#86948a] py-10 text-center">Log one more check-in to see your trend line.</p>
               ) : (
@@ -131,7 +131,7 @@ export const ProgressSection: React.FC = () => {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="font-headline text-xl font-bold text-[#d8e3fb]">Badges</h2>
+          <h2 className="font-headline text-xl font-bold text-[#d8e3fb]">{t('p_badges', "Badges")}</h2>
           <span className="text-xs text-[#86948a]">{achievements.filter((a) => a.unlocked).length} / {achievements.length} earned</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

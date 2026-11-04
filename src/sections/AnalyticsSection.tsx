@@ -83,12 +83,12 @@ export const AnalyticsSection: React.FC = () => {
           <span className="material-symbols-outlined text-[16px]">insights</span>
           {t('analytics', 'Analytics')}
         </div>
-        <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb]">Your numbers</h1>
-        <p className="text-xs sm:text-sm text-[#bbcabf] mt-1">Built only from what you log: workouts, meals you tick as eaten, sleep and steps.</p>
+        <h1 className="font-headline text-3xl sm:text-4xl font-bold text-[#d8e3fb]">{t('a_title', "Your numbers")}</h1>
+        <p className="text-xs sm:text-sm text-[#bbcabf] mt-1">{t('a_sub', "Built only from what you log: workouts, meals you tick as eaten, sleep and steps.")}</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
-        <Panel title="Training volume" subtitle="Kg lifted per week (sets × reps × weight), last 8 weeks">
+        <Panel title={t('a_volume', "Training volume")} subtitle="Kg lifted per week (sets × reps × weight), last 8 weeks">
           {!sessionsLoaded ? (
             <div className="h-36 animate-pulse rounded-xl bg-[#111c2d]" />
           ) : sessions.length === 0 ? (
@@ -106,7 +106,7 @@ export const AnalyticsSection: React.FC = () => {
           )}
         </Panel>
 
-        <Panel title="Muscles trained" subtitle="Working sets per muscle group, last 30 days">
+        <Panel title={t('a_muscles', "Muscles trained")} subtitle="Working sets per muscle group, last 30 days">
           {muscleSplit.length === 0 ? (
             <EmptyHint text="This fills in after your first logged workout." />
           ) : (
@@ -116,7 +116,7 @@ export const AnalyticsSection: React.FC = () => {
           )}
         </Panel>
 
-        <Panel title="Today's food" subtitle={eatenCount ? `From ${eatenCount} meal${eatenCount > 1 ? 's' : ''} you ticked as eaten` : 'Tick meals as eaten on the Nutrition page to see this'}>
+        <Panel title={t('a_food', "Today's food")} subtitle={eatenCount ? `From ${eatenCount} meal${eatenCount > 1 ? 's' : ''} you ticked as eaten` : 'Tick meals as eaten on the Nutrition page to see this'}>
           <div className="flex flex-col gap-3">
             <Bar label="Calories" value={consumedCalories} max={healthMetrics.dailyCalorieTarget} text={`${consumedCalories} / ${healthMetrics.dailyCalorieTarget} kcal`} />
             <Bar label="Protein" value={consumedProtein} max={healthMetrics.proteinTarget} text={`${consumedProtein} / ${healthMetrics.proteinTarget} g`} tone="#9ddf2e" />
@@ -126,7 +126,7 @@ export const AnalyticsSection: React.FC = () => {
           <p className="text-[11px] text-[#86948a] mt-3">Targets come from your profile (Mifflin-St Jeor formula and your goal).</p>
         </Panel>
 
-        <Panel title="Recovery & activity" subtitle="What you logged today">
+        <Panel title={t('a_recovery', "Recovery & activity")} subtitle="What you logged today">
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#111c2d] rounded-xl p-3 border border-[#1f2a3c]">
               <div className="text-[11px] text-[#86948a] font-semibold">Sleep</div>

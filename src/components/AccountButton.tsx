@@ -6,7 +6,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 /** Header control: "Sign in" for guests, account menu (sync status, My Gym, sign out) when signed in. */
 export const AccountButton: React.FC = () => {
   const { cloudEnabled, user, account, authLoading, signIn, signOut, authError } = useAuth();
-  const { navigateTo, showToast } = useFitMate();
+  const { navigateTo, showToast, t } = useFitMate();
   const online = useOnlineStatus();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -32,7 +32,7 @@ export const AccountButton: React.FC = () => {
         title="Sign in to save your workouts to your account and use them on any device"
       >
         <span className="material-symbols-outlined text-[18px]">login</span>
-        <span className="hidden sm:inline">Sign in</span>
+        <span className="hidden sm:inline">{t('acc_signIn', "Sign in")}</span>
       </button>
     );
   }
@@ -86,7 +86,7 @@ export const AccountButton: React.FC = () => {
             className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm text-[#ffb4ab] hover:bg-[#2a1416]"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
-            Sign out
+            {t('acc_signOut', "Sign out")}
           </button>
           <p className="text-[10px] text-[#86948a] px-2 pt-1">Signing out removes your data from this device. It stays safe in your account.</p>
         </div>
