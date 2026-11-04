@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useFitMate } from '../context/FitMateContext';
 import { ExerciseAnimation } from './ExerciseAnimation';
 import { ExerciseSubstitutionModal } from './ExerciseSubstitutionModal';
-import { describeSets } from '../lib/progression';
+import { describeSets, platesPerSide, usesBarbell, warmupSets } from '../lib/progression';
 
 export const WorkoutActiveModal: React.FC = () => {
   const {
@@ -266,6 +266,36 @@ export const WorkoutActiveModal: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Warm-up sets (before the first working set) and plates to load */}
+            {(() => {
+              const working = currentSetLog?.weightKg || 0;
+              const warmups = activeSetIndex === 1 && !activeSetsLog.some(s => s.completed) ? warmupSets(currentExercise, working) : [];
+              const plates = usesBarbell(currentExercise) && working > 20 ? platesPerSide(working) : null;
+              if (!warmups.length && !plates) return null;
+              return (
+                <div className="flex flex-col sm:flex-row gap-2.5 -mt-1">
+                  {warmups.length > 0 && (
+                    <div className="flex-1 bg-[#0c1421] rounded-2xl border border-[#1f2a3c] px-3.5 py-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#ffb95f] flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">local_fire_department</span>Warm up first (not logged)
+                      </div>
+                      <div className="text-xs text-[#d8e3fb] mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                        {warmups.map((w, i) => <span key={i} className="tabular-nums">{w.weightKg} kg × {w.reps}</span>)}
+                      </div>
+                    </div>
+                  )}
+                  {plates && (
+                    <div className="flex-1 bg-[#0c1421] rounded-2xl border border-[#1f2a3c] px-3.5 py-2.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#9ecaff] flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">fitness_center</span>Plates each side (20 kg bar)
+                      </div>
+                      <div className="text-xs text-[#d8e3fb] mt-1 tabular-nums">{plates.length ? plates.join(' + ') + ' kg' : 'Empty bar'}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* SET-BY-SET PROGRESSIVE OVERLOAD LOGGER GRID */}
             <div className="bg-[#0c1421] p-4 rounded-2xl border border-[#1f2a3c]">

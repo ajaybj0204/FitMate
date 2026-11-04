@@ -207,3 +207,42 @@ export function quickVersion(day: WorkoutDay): WorkoutDay {
     exercises: day.exercises.slice(0, 3).map((e) => ({ ...e, sets: Math.max(2, e.sets - 1), restSeconds: Math.min(e.restSeconds, 75) })),
   };
 }
+
+// ── In-gym helpers ───────────────────────────────────────────────────────────
+
+const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
+
+/** Plates to load on EACH side of the bar for a total weight. Null if it can't be made exactly. */
+export function platesPerSide(totalKg: number, barKg = 20): number[] | null {
+  let side = Math.round(((totalKg - barKg) / 2) * 100) / 100;
+  if (side < 0) return null;
+  const out: number[] = [];
+  for (const p of PLATES) {
+    while (side >= p - 1e-9) {
+      out.push(p);
+      side = Math.round((side - p) * 100) / 100;
+    }
+  }
+  return side === 0 ? out : null;
+}
+
+export const usesBarbell = (ex: Pick<Exercise, 'equipment' | 'name'>) => /barbell/i.test(ex.equipment) || /barbell/i.test(ex.name);
+
+/**
+ * Warm-up sets before a heavy working weight (a common ramp: bar, ~50%, ~70%, ~85%).
+ * Only for weights where warming up matters (40 kg+ barbell, 20 kg+ otherwise).
+ */
+export function warmupSets(ex: Pick<Exercise, 'equipment' | 'name'>, workKg: number): { weightKg: number; reps: number }[] {
+  const barbell = usesBarbell(ex);
+  if (workKg < (barbell ? 40 : 20)) return [];
+  const step = barbell ? 2.5 : weightStep(ex as Exercise);
+  const r = (pct: number) => Math.max(barbell ? 20 : step, roundTo(workKg * pct, step));
+  const sets = [
+    ...(barbell ? [{ weightKg: 20, reps: 10 }] : []),
+    { weightKg: r(0.5), reps: 5 },
+    { weightKg: r(0.7), reps: 3 },
+    ...(workKg >= 60 ? [{ weightKg: r(0.85), reps: 1 }] : []),
+  ];
+  // Drop duplicates (light weights can round to the same number)
+  return sets.filter((s, i) => s.weightKg < workKg && sets.findIndex((x) => x.weightKg === s.weightKg) === i);
+}

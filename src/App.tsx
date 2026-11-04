@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { FitMateProvider, useFitMate } from './context/FitMateContext';
 import { AuthProvider } from './context/AuthContext';
 import { GymSection } from './sections/gym/GymSection';
+import { PayPage, isPayHash } from './sections/PayPage';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { MobileNav } from './components/MobileNav';
@@ -87,6 +88,8 @@ const MainAppContent: React.FC = () => {
 };
 
 export default function App() {
+  // Fee payment links open a standalone public page (no sign-in, no app chrome)
+  if (isPayHash(window.location.hash)) return <PayPage />;
   return (
     <AuthProvider>
       <FitMateProvider>

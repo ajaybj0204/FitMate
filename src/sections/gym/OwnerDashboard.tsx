@@ -15,6 +15,7 @@ import {
   manualCheckin,
   missYouText,
   normalisePhone,
+  isValidUpiId,
   recordPayment,
   rotateQrToken,
   subscribeCheckinsSince,
@@ -26,9 +27,10 @@ import {
   whatsappLink,
 } from '../../lib/gym';
 import { localDate } from '../../lib/progression';
+import { ReportsPanel } from './ReportsPanel';
 import { Btn, Card, FeeBadge, Modal, Stat, daysSinceVisit, fmtDate, inputCls, inr, labelCls, visitText } from './ui';
 
-type Tab = 'overview' | 'members' | 'payments' | 'qr' | 'settings';
+type Tab = 'overview' | 'members' | 'payments' | 'reports' | 'qr' | 'settings';
 
 const METHODS: { id: PaymentMethod; label: string }[] = [
   { id: 'upi', label: 'UPI' },
@@ -50,7 +52,7 @@ export const OwnerDashboard: React.FC<{ gymId: string }> = ({ gymId }) => {
   const [inviting, setInviting] = useState<GymMember | null>(null);
   const [memberFilter, setMemberFilter] = useState<'all' | 'due' | 'overdue' | 'inactive' | 'unlinked'>('all');
 
-  const since = useMemo(() => localDate(new Date(Date.now() - 60 * 864e5)), []);
+  const since = useMemo(() => localDate(new Date(Date.now() - 100 * 864e5)), []);
   useEffect(() => subscribeGym(gymId, setGym), [gymId]);
   useEffect(() => subscribeMembers(gymId, setMembers), [gymId]);
   useEffect(() => subscribePayments(gymId, setPayments), [gymId]);
@@ -115,6 +117,7 @@ export const OwnerDashboard: React.FC<{ gymId: string }> = ({ gymId }) => {
     { id: 'members', label: `Members (${active.length})`, icon: 'group' },
     { id: 'payments', label: 'Payments', icon: 'payments' },
     { id: 'qr', label: 'Check-in QR', icon: 'qr_code_2' },
+    { id: 'reports', label: 'Reports', icon: 'monitoring' },
     { id: 'settings', label: 'Settings', icon: 'tune' },
   ];
 
@@ -343,6 +346,8 @@ export const OwnerDashboard: React.FC<{ gymId: string }> = ({ gymId }) => {
 
       {tab === 'qr' && <QrPanel gym={gym} todayCheckins={todayCheckins} memberById={memberById} />}
 
+      {tab === 'reports' && <ReportsPanel gym={gym} members={members} payments={payments} checkins={checkins} checkinsSince={since} />}
+
       {tab === 'settings' && <SettingsPanel gym={gym} onSaved={() => showToast('Gym settings saved.')} />}
 
       {adding && <AddMemberModal gym={gym} onClose={() => setAdding(false)} onAdded={(m) => { setAdding(false); setInviting(m); }} />}
@@ -484,7 +489,15 @@ const EditMemberModal: React.FC<{ gym: Gym; member: GymMember; onClose: () => vo
   const [notes, setNotes] = useState(member.notes || '');
 
   const save = async () => {
-    await updateMember(gym.id, member.id, { name: name.trim(), phone: normalisePhone(phone), status, dueDate, notes });
+    await updateMember(gym.id, member.id, {
+      name: name.trim(),
+      phone: normalisePhone(phone),
+      status,
+      dueDate,
+      notes,
+      // Remember when someone left, for the monthly report
+      leftOn: status === 'left' ? member.leftOn || localDate() : null,
+    });
     showToast('Member updated.');
     onClose();
   };
@@ -632,6 +645,7 @@ const SettingsPanel: React.FC<{ gym: Gym; onSaved: () => void }> = ({ gym, onSav
   const [name, setName] = useState(gym.name);
   const [city, setCity] = useState(gym.city);
   const [phone, setPhone] = useState(gym.phone);
+  const [upiId, setUpiId] = useState(gym.upiId || '');
   const [days, setDays] = useState(gym.inactiveAfterDays);
   const [plans, setPlans] = useState<GymPlan[]>(gym.plans);
   const setPlan = (i: number, patch: Partial<GymPlan>) => setPlans((p) => p.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -643,6 +657,15 @@ const SettingsPanel: React.FC<{ gym: Gym; onSaved: () => void }> = ({ gym, onSav
         <label className="flex flex-col gap-1"><span className={labelCls}>City / area</span><input className={inputCls} value={city} onChange={(e) => setCity(e.target.value)} /></label>
         <label className="flex flex-col gap-1"><span className={labelCls}>Gym phone</span><input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
       </div>
+      <label className="flex flex-col gap-1 max-w-md">
+        <span className={labelCls}>UPI ID for fee payments (optional)</span>
+        <input className={inputCls} value={upiId} onChange={(e) => setUpiId(e.target.value.trim())} placeholder="e.g. ironfit@okaxis" />
+        <span className={`text-[11px] ${upiId && !isValidUpiId(upiId) ? 'text-[#ffb4ab]' : 'text-[#86948a]'}`}>
+          {upiId && !isValidUpiId(upiId)
+            ? "That doesn't look like a UPI ID (name@bank)."
+            : "Fee reminders will include a Pay link that opens the member's UPI app with the amount filled in. Money goes straight to you."}
+        </span>
+      </label>
       <label className="flex flex-col gap-1 max-w-xs">
         <span className={labelCls}>"At risk" after no visit for</span>
         <select className={inputCls} value={days} onChange={(e) => setDays(Number(e.target.value))}>
@@ -673,7 +696,7 @@ const SettingsPanel: React.FC<{ gym: Gym; onSaved: () => void }> = ({ gym, onSav
           icon="save"
           disabled={!name.trim()}
           onClick={async () => {
-            await updateGym(gym.id, { name: name.trim(), city: city.trim(), phone: phone.trim(), inactiveAfterDays: days, plans: plans.filter((p) => p.name.trim()) });
+            await updateGym(gym.id, { name: name.trim(), city: city.trim(), phone: phone.trim(), inactiveAfterDays: days, upiId: isValidUpiId(upiId) ? upiId : "", plans: plans.filter((p) => p.name.trim()) });
             onSaved();
           }}
         >

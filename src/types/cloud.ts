@@ -63,6 +63,8 @@ export interface Gym {
   plans: GymPlan[];
   /** Days without a visit before a member counts as "at risk" */
   inactiveAfterDays: number;
+  /** Owner's UPI ID for fee payment links (e.g. ironfit@okaxis). Optional. */
+  upiId?: string;
   createdAt: number;
 }
 
@@ -84,6 +86,8 @@ export interface GymMember {
   /** Owner-only: code inside the invite link */
   inviteCode: string;
   lastVisit?: string | null;
+  /** Date the member was marked as left (for monthly reports) */
+  leftOn?: string | null;
   createdAt: number;
 }
 

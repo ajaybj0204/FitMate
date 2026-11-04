@@ -327,11 +327,25 @@ export const whatsappLink = (phone: string, text: string) => `https://wa.me/${no
 
 const fmtDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
+export const isValidUpiId = (v: string) => /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z]{2,64}$/.test(v.trim());
+
+/** Page on FITORA that opens the member's UPI app with the gym's UPI ID and amount filled in. */
+export function payPageUrl(gym: Gym, m: GymMember) {
+  const plan = gym.plans.find((p) => p.id === m.planId);
+  const params = new URLSearchParams({
+    pa: gym.upiId || '',
+    pn: gym.name,
+    am: String(plan?.priceInr || ''),
+    tn: `${plan?.name || 'Membership'} fee - ${m.name}`.slice(0, 60),
+  });
+  return `${SITE_URL}/#pay?${params.toString()}`;
+}
+
 export function feeReminderText(gym: Gym, m: GymMember) {
   const plan = gym.plans.find((p) => p.id === m.planId);
   const days = daysUntilDue(m);
   const when = days < 0 ? `was due on ${fmtDate(m.dueDate)}` : days === 0 ? 'is due today' : `is due on ${fmtDate(m.dueDate)}`;
-  return `Hi ${m.name.split(' ')[0]}, this is ${gym.name}. Your ${plan?.name.toLowerCase() || ''} membership fee${plan ? ` of ₹${plan.priceInr.toLocaleString('en-IN')}` : ''} ${when}. You can pay by UPI or at the desk. Thank you! 💪`;
+  return `Hi ${m.name.split(' ')[0]}, this is ${gym.name}. Your ${plan?.name.toLowerCase() || ''} membership fee${plan ? ` of ₹${plan.priceInr.toLocaleString('en-IN')}` : ''} ${when}. ${gym.upiId && isValidUpiId(gym.upiId) ? `Pay by UPI here: ${payPageUrl(gym, m)} (or at the desk).` : 'You can pay by UPI or at the desk.'} Thank you! 💪`;
 }
 
 export function missYouText(gym: Gym, m: GymMember, days: number | null) {

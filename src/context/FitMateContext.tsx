@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import { useAuth } from './AuthContext';
 import { saveSession, subscribeSessions } from '../lib/cloudStore';
 import { prepareLocalData } from '../lib/localData';
+import { playRestCompleteChime } from '../utils/audioCues';
 import {
   bestSet,
   computeStreak,
@@ -98,6 +99,8 @@ interface FitMateContextType {
   previousBestForExercise: { weight: number; reps: number } | null;
   substituteExercise: (dayId: string, exerciseIndex: number, newExercise: Exercise) => void;
   addExerciseToWorkoutDay: (dayId: string, exercise: Exercise) => void;
+  /** Replace the whole weekly plan (plan generator). Workout history is kept. */
+  replaceSchedule: (days: WorkoutDay[]) => void;
 
   // Smart logger (real workout history)
   sessions: WorkoutSession[];
@@ -614,6 +617,14 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     showToast(`Added "${exercise.name}" to your scheduled workout! 🏋️`);
   };
 
+  const replaceSchedule = (days: WorkoutDay[]) => {
+    setWorkoutSchedule(days);
+    try {
+      localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(days));
+    } catch {}
+    showToast('Your new weekly plan is ready! 🗓️');
+  };
+
   // Exercise Library Favorites
   const [savedExerciseIds, setSavedExerciseIds] = useState<string[]>(() => {
     try {
@@ -772,7 +783,12 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setRestTimerSeconds(prev => {
           if (prev <= 1) {
             setIsTimerRunning(false);
-            showToast('Rest timer finished! Time for next set 💪', 'info');
+            showToast('Rest over. Time for your next set 💪', 'info');
+            // Sound + vibration so you notice even with the phone on the bench
+            try {
+              playRestCompleteChime();
+              navigator.vibrate?.([300, 150, 300, 150, 300]);
+            } catch {}
             return 0;
           }
           return prev - 1;
@@ -1136,6 +1152,7 @@ export const FitMateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         previousBestForExercise,
         substituteExercise,
         addExerciseToWorkoutDay,
+        replaceSchedule,
         sessions,
         sessionsLoaded,
         suggestionFor,

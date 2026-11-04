@@ -4,6 +4,7 @@ import { useFitMate } from '../context/FitMateContext';
 import { Exercise } from '../types';
 import { ExerciseSubstitutionModal } from '../components/ExerciseSubstitutionModal';
 import { ExerciseAnimation } from '../components/ExerciseAnimation';
+import { PlanBuilderModal } from '../components/PlanBuilderModal';
 import { exerciseImageUrl } from '../data/exerciseDb';
 
 export const WorkoutSection: React.FC = () => {
@@ -22,6 +23,7 @@ export const WorkoutSection: React.FC = () => {
 
   const [inspectingExercise, setInspectingExercise] = useState<Exercise | null>(null);
   const [substitutingExercise, setSubstitutingExercise] = useState<{ exercise: Exercise; index: number } | null>(null);
+  const [isPlanBuilderOpen, setIsPlanBuilderOpen] = useState(false);
 
   const activeDay =
     workoutSchedule.find(d => d.id === selectedScheduleDayId) || workoutSchedule[0];
@@ -50,7 +52,7 @@ export const WorkoutSection: React.FC = () => {
             </span>
           </div>
           <h1 className="font-headline text-2xl sm:text-3xl font-bold text-[#d8e3fb]">
-            Hypertrophy &amp; Strength Builder
+            Your Weekly Plan
           </h1>
           <p className="text-xs sm:text-sm text-[#bbcabf] max-w-xl leading-relaxed">
             Your weekly plan. Log every set and FITORA remembers your numbers and tells you what to lift next time.
@@ -72,8 +74,17 @@ export const WorkoutSection: React.FC = () => {
             <span className="text-[10px] text-[#86948a] uppercase font-semibold">Frequency</span>
             <span className="text-xs font-bold text-[#98da27]">{userProfile.workoutDaysPerWeek} Days / Wk</span>
           </div>
+
+          <button
+            onClick={() => setIsPlanBuilderOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#4edea3] hover:bg-[#6ffbbe] text-[#003824] text-xs font-bold"
+          >
+            <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
+            Build my plan
+          </button>
         </div>
       </div>
+      {isPlanBuilderOpen && <PlanBuilderModal onClose={() => setIsPlanBuilderOpen(false)} />}
 
       {/* Missed a training day? Do it today or skip it */}
       {missedDays.length > 0 && (
